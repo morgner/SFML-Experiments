@@ -21,9 +21,9 @@ bool CCanvas::Collision(SPoint const & tPoint)
     int i{0};
     for ( auto & a:m_vButtons )
         {
-        std::cout << "bar " << i << std::endl; 
         if ( Inside(tPoint, a) )
             {
+            std::cout << "bar " << i << std::endl; 
             m_tCollision.tWhere  = tPoint;
             m_tCollision.tOffset = tPoint - a.a;
             m_tCollision.eWhat   = SCollision::EWhat::Button;
@@ -36,9 +36,9 @@ bool CCanvas::Collision(SPoint const & tPoint)
     i = 0;
     for ( auto & a:m_vDrawing )
         {
-        std::cout << "object " << i << std::endl; 
         if ( Inside(tPoint, a) )
             {
+            std::cout << "object " << i << std::endl; 
             m_tCollision.tWhere  = tPoint;
             m_tCollision.tOffset = tPoint - a.a;
             m_tCollision.eWhat   = SCollision::EWhat::Drawing;
