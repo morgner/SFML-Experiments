@@ -135,22 +135,24 @@ void CCanvas::OnDraw()
         }
 
     // draw everything ...
-    int i{0};
     for (auto const & a:m_vDrawing)
         {
         sf::RectangleShape rect(sf::Vector2f(a.a.x, a.a.y));
         rect.move(a.b.x,a.b.y);
-        if ( m_tCollision.eWhat  == SCollision::EWhat::Drawing &&
-             m_tCollision.nIndex == i )
-            rect.setFillColor(sf::Color(250, 50, 50));
-        else
-            rect.setFillColor(sf::Color(50, 250, 50));
+        rect.setFillColor(sf::Color(50, 250, 50));
         m_oCtx.draw(rect);
-        ++i;
+        }
+    if ( m_tCollision.eWhat  == SCollision::EWhat::Drawing )
+        {
+        auto a = m_vDrawing[m_tCollision.nIndex];
+        sf::RectangleShape rect(sf::Vector2f(a.a.x, a.a.y));
+        rect.move(a.b.x,a.b.y);
+        rect.setFillColor(sf::Color(250, 50, 50));
+        m_oCtx.draw(rect);
         }
 
     // draw buttons ...
-    i = 0;
+    int i{0};
     for (auto const & a:m_vButtons)
         {
         sf::RectangleShape rect(sf::Vector2f(a.a.x, a.a.y));
