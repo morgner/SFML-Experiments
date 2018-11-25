@@ -103,6 +103,7 @@ class CCanvas
               m_oCtx(ctx)
             {
             m_fTicker.launch();
+            m_bHasFont = m_fFont.loadFromFile("/usr/share/texlive/texmf-dist/fonts/opentype/public/fira/FiraSans-Italic.otf");
             }
 
         virtual ~CCanvas()
@@ -119,12 +120,37 @@ class CCanvas
             return m_tMousePos = m_oCtx.mapPixelToCoords(p);
             }
 
+        struct FillColor
+            {
+            sf::Uint8 r{255},g{255},b{255};
+
+            FillColor(sf::Uint8 const & r,sf::Uint8 const & g,sf::Uint8 const & b)
+                : r(r),g(g),b(b) {}
+
+            operator sf::Color()
+                {
+                if ( m_bHasFocus )
+                    {
+                    return {r,g,b};
+                    }
+                else
+                    {
+                    sf::Uint8 c = ((float)r+g+b)/3;
+                    return {c,c,c};
+                    }
+                } 
+            };
+
         bool Collision(SPoint const & tPoint);
         void Event(sf::Event const & event);
 
+        void DoButtonAction(int const & n);
 
     private:
-        bool   m_bHasFocus{true};
+        static bool m_bHasFocus;
+        bool m_bHasFont{false};
+
+        sf::Font m_fFont;
 
         VSRect m_vDrawing{};
         VSRect m_vButtons{};

@@ -1,4 +1,7 @@
 #include "canvas.h"
+#include <chrono>
+#include <ctime>
+#include <sstream>
 #include <math.h>
 
 
@@ -23,7 +26,7 @@ bool CCanvas::Collision(SPoint const & tPoint)
         {
         if ( Inside(tPoint, a) )
             {
-            std::cout << "bar " << i << std::endl; 
+//          std::cout << "bar " << i << std::endl; 
             m_tCollision.tWhere  = tPoint;
             m_tCollision.tOffset = tPoint - a.a;
             m_tCollision.eWhat   = SCollision::EWhat::Button;
@@ -38,7 +41,7 @@ bool CCanvas::Collision(SPoint const & tPoint)
         {
         if ( Inside(tPoint, a) )
             {
-            std::cout << "object " << i << std::endl; 
+//          std::cout << "object " << i << std::endl; 
             m_tCollision.tWhere  = tPoint;
             m_tCollision.tOffset = tPoint - a.a;
             m_tCollision.eWhat   = SCollision::EWhat::Drawing;
@@ -75,6 +78,14 @@ void CCanvas::Event(sf::Event const & event)
 
     if (event.type == sf::Event::MouseButtonPressed)
         {
+        if (event.mouseButton.button == sf::Mouse::Left)
+            {
+            m_tMouseEventLeft = 
+                SMouse{true, 
+                       m_oCtx.mapPixelToCoords(
+                            sf::Vector2i{event.mouseButton.x,
+                                         event.mouseButton.y})};
+            }
         if (event.mouseButton.button == sf::Mouse::Right)
             {
             m_tMouseEventRight = 
@@ -85,9 +96,24 @@ void CCanvas::Event(sf::Event const & event)
             }
         }
 
+    if (event.type == sf::Event::MouseWheelScrolled)
+        {
+        auto v (m_oCtx.getView());
+        v.zoom( (event.mouseWheelScroll.delta > 0.0f) ? .9f : 1.1f );
+        m_oCtx.setView(v);
+        }
+
     if (event.type == sf::Event::MouseButtonReleased)
         {
         m_tMousePos = event.mouseButton;
+        if (event.mouseButton.button == sf::Mouse::Left)
+            {
+            m_tMouseEventLeft.d = false;
+            if ( m_tCollision.eWhat  == SCollision::EWhat::Button )
+                {
+                DoButtonAction( m_tCollision.nIndex );
+                }
+            }
         if (event.mouseButton.button == sf::Mouse::Right)
             {
             m_tMouseEventRight.d = false;
@@ -96,8 +122,32 @@ void CCanvas::Event(sf::Event const & event)
         }
     }
 
+
+void CCanvas::DoButtonAction(int const & n)
+    {
+    switch (n)
+        {
+        case 0: std::cout << (char)(n+'a') << '\n'; break;
+        case 1: std::cout << (char)(n+'a') << '\n'; break;
+        case 2: std::cout << (char)(n+'a') << '\n'; break;
+        case 3: std::cout << (char)(n+'a') << '\n'; break;
+        case 4: std::cout << (char)(n+'a') << '\n'; break;
+        case 5: std::cout << (char)(n+'a') << '\n'; break;
+        case 6: std::cout << (char)(n+'a') << '\n'; break;
+        case 7: std::cout << (char)(n+'a') << '\n'; break;
+        }
+    }
+
+bool CCanvas::m_bHasFocus{true}; 
+
 void CCanvas::OnDraw()
     {
+    sf::Text text;
+    text.setFont(m_fFont);
+    text.setCharacterSize(24); // in pixels, not points!
+    text.setFillColor(FillColor{0,0,0});
+//    text.setStyle(sf::Text::Bold | sf::Text::Underlined);
+
     auto s = m_oCtx.getSize();
     // clear the m_oCtx
     m_oCtx.clear(sf::Color::White);
@@ -106,7 +156,7 @@ void CCanvas::OnDraw()
     static auto const r{7.f};
     sf::CircleShape shape(r);
     shape.move(m_tMousePos.x-r,m_tMousePos.y-r);
-    shape.setFillColor(sf::Color(100, 250, 50));
+    shape.setFillColor(FillColor(100, 250, 50));
     m_oCtx.draw(shape);
 
     bool b = Collision(m_tMousePos);
@@ -114,7 +164,7 @@ void CCanvas::OnDraw()
     // initiate buttons
     if ( 0 == m_vButtons.size() )
         {
-        float w{50}, h{50}, b{5};
+        float w{50}, h{50}, b{8};
         for ( int i{0}; i < 8; ++i )
             {
             m_vButtons.emplace_back( SRect{w,h, i*(w+b)+b, b} );
@@ -128,10 +178,17 @@ void CCanvas::OnDraw()
                                           m_tMouseEventRight.p.y-m_tMousePos.y));
         m.move(m_tMousePos.x,m_tMousePos.y);
         if (m_bHasFocus)
-            m.setFillColor(sf::Color(50, 50, 250));
+            m.setFillColor(FillColor(50, 50, 250));
         else
-            m.setFillColor(sf::Color(250, 50, 50));
+            m.setFillColor(FillColor(250, 50, 50));
         m_oCtx.draw(m);
+        }
+    if (m_tMouseEventLeft.d)
+        {
+        auto v (m_oCtx.getView());
+        v.move({ m_tMouseEventLeft.p.x-m_tMousePos.x,
+                 m_tMouseEventLeft.p.y-m_tMousePos.y });
+        m_oCtx.setView(v);
         }
 
     // draw everything ...
@@ -139,7 +196,7 @@ void CCanvas::OnDraw()
         {
         sf::RectangleShape rect(sf::Vector2f(a.a.x, a.a.y));
         rect.move(a.b.x,a.b.y);
-        rect.setFillColor(sf::Color(50, 250, 50));
+        rect.setFillColor(FillColor(150, 250, 150));
         m_oCtx.draw(rect);
         }
     if ( m_tCollision.eWhat  == SCollision::EWhat::Drawing )
@@ -147,36 +204,84 @@ void CCanvas::OnDraw()
         auto a = m_vDrawing[m_tCollision.nIndex];
         sf::RectangleShape rect(sf::Vector2f(a.a.x, a.a.y));
         rect.move(a.b.x,a.b.y);
-        rect.setFillColor(sf::Color(250, 50, 50));
+        rect.setFillColor(FillColor(150, 50, 50));
         m_oCtx.draw(rect);
+
+        rect.setFillColor(FillColor(250, 250, 50));
+        rect.setOutlineColor(FillColor(0, 0, 0));
+        rect.setOutlineThickness(2.f);
+        rect.setSize({10,10});
+        rect.move( a.a.x/2-5, a.a.y/2-5 );
+
+        // middle handles
+        rect.move( a.a.x/2,       0 ); m_oCtx.draw(rect);
+        rect.move( - a.a.x,       0 ); m_oCtx.draw(rect);
+        rect.move( a.a.x/2, a.a.y/2 ); m_oCtx.draw(rect);
+        rect.move(       0, - a.a.y ); m_oCtx.draw(rect);
+/*
+        // corner handles
+        rect.move( a.a.x/2, a.a.y/2 ); m_oCtx.draw(rect);
+        rect.move( - a.a.x,       0 ); m_oCtx.draw(rect);
+        rect.move(       0, - a.a.y ); m_oCtx.draw(rect);
+        rect.move( + a.a.x,       0 ); m_oCtx.draw(rect);
+*/
         }
 
     // draw buttons ...
-    int i{0};
-    for (auto const & a:m_vButtons)
+    if ( m_vButtons.size() )
         {
-        sf::RectangleShape rect(sf::Vector2f(a.a.x, a.a.y));
-        rect.move(a.b.x,a.b.y);
-        if ( m_tCollision.eWhat  == SCollision::EWhat::Button &&
-             m_tCollision.nIndex == i )
-            rect.setFillColor(sf::Color(150, 250, 150));
-        else
-            rect.setFillColor(sf::Color(150, 150, 150));
-        m_oCtx.draw(rect);
-        ++i;
+        text.setCharacterSize(36); // in pixels, not points!
+        text.setFillColor(FillColor{0,0,0});
+//        text.setStyle(sf::Text::Bold);
+
+        sf::RectangleShape rect(sf::Vector2f(m_vButtons[0].a.x, m_vButtons[0].a.y));
+        rect.move(8,8);
+        int i{0};
+        for (auto const & a:m_vButtons)
+            {
+            if ( m_tCollision.eWhat  == SCollision::EWhat::Button &&
+                 m_tCollision.nIndex == i )
+                if ( m_tMouseEventLeft.d )
+                    rect.setFillColor(FillColor( 50, 200, 200));
+                else
+                    rect.setFillColor(FillColor(150, 250, 150));
+
+            else
+                rect.setFillColor(FillColor(150, 150, 150));
+            m_oCtx.draw(rect);
+
+            text.setString((char)(i+'a'));
+            text.setOrigin(i*-58 -25-text.getLocalBounds().width/2 , -8);
+            m_oCtx.draw(text);
+
+            rect.move(a.a.x+8,0);
+            ++i;
+            }
         }
 
     // draw animation ...
     sf::RectangleShape line(sf::Vector2f(s.x/4, 25.f));
     line.move(s.x/2,s.y/2);
     line.rotate(360.f * m_dAnimate);
-    if (m_bHasFocus)
-        line.setFillColor(sf::Color(50, 50, 250));
-    else
-        line.setFillColor(sf::Color(150, 150, 150));
+    line.setFillColor(FillColor(50, 50, 250));
     m_oCtx.draw(line);
+
+    auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()); 
+    std::stringstream ss;
+    ss << ctime(&timenow);
+
+
+    text.setFont(m_fFont);
+    text.setString(ss.str());
+    text.setCharacterSize(24); // in pixels, not points!
+    text.setFillColor(FillColor{0,0,250});
+//    text.setStyle(sf::Text::Bold | sf::Text::Underlined);
+//    text.setOrigin(s.x-text.getLocalBounds().width, 30);
+    text.setOrigin(text.getLocalBounds().width-s.x+8, -8);
+    m_oCtx.draw(text);
 
     // end the current frame
     m_oCtx.display();
+
     }
 

@@ -3,11 +3,12 @@
 int main()
     {
     sf::ContextSettings settings;
-    settings.antialiasingLevel = 0;
+                        settings.antialiasingLevel = 0;
 
+    sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
     sf::RenderWindow window(sf::VideoMode(800, 600), "SFML window");
-
-    window.setFramerateLimit(60); // call it once, after creating the window
+//                   window.create(sf::VideoMode::getDesktopMode(), "SFML window", sf::Style::Fullscreen);
+                     window.setFramerateLimit(60);
 
     CCanvas oCanvas{window};
 
