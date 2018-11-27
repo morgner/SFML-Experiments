@@ -103,7 +103,8 @@ class CCanvas
               m_oCtx(ctx)
             {
             m_fTicker.launch();
-            m_bHasFont = m_fFont.loadFromFile("/usr/share/texlive/texmf-dist/fonts/opentype/public/fira/FiraSans-Italic.otf");
+            m_bHasFont = m_fFont.loadFromFile("/usr/share/texlive/texmf-dist/fonts/opentype/public/fira/FiraSans-Regular.otf");
+            m_tText.setFont(m_fFont);
             }
 
         virtual ~CCanvas()
@@ -150,6 +151,7 @@ class CCanvas
         static bool m_bHasFocus;
         bool m_bHasFont{false};
 
+        sf::Text m_tText;
         sf::Font m_fFont;
 
         VSRect m_vDrawing{};

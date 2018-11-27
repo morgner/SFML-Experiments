@@ -98,9 +98,9 @@ void CCanvas::Event(sf::Event const & event)
 
     if (event.type == sf::Event::MouseWheelScrolled)
         {
-        auto v (m_oCtx.getView());
-        v.zoom( (event.mouseWheelScroll.delta > 0.0f) ? .9f : 1.1f );
-        m_oCtx.setView(v);
+//        auto v (m_oCtx.getView());
+//        v.zoom( (event.mouseWheelScroll.delta > 0.0f) ? .9f : 1.1f );
+//        m_oCtx.setView(v);
         }
 
     if (event.type == sf::Event::MouseButtonReleased)
@@ -142,11 +142,10 @@ bool CCanvas::m_bHasFocus{true};
 
 void CCanvas::OnDraw()
     {
-    sf::Text text;
-    text.setFont(m_fFont);
-    text.setCharacterSize(24); // in pixels, not points!
-    text.setFillColor(FillColor{0,0,0});
-//    text.setStyle(sf::Text::Bold | sf::Text::Underlined);
+    m_tText.setFont(m_fFont);
+    m_tText.setCharacterSize(24); // in pixels, not points!
+    m_tText.setFillColor(FillColor{0,0,0});
+//    m_tText.setStyle(sf::Text::Bold | sf::Text::Underlined);
 
     auto s = m_oCtx.getSize();
     // clear the m_oCtx
@@ -185,10 +184,10 @@ void CCanvas::OnDraw()
         }
     if (m_tMouseEventLeft.d)
         {
-        auto v (m_oCtx.getView());
-        v.move({ m_tMouseEventLeft.p.x-m_tMousePos.x,
-                 m_tMouseEventLeft.p.y-m_tMousePos.y });
-        m_oCtx.setView(v);
+//        auto v (m_oCtx.getView());
+//        v.move({ m_tMouseEventLeft.p.x-m_tMousePos.x,
+//                 m_tMouseEventLeft.p.y-m_tMousePos.y });
+//        m_oCtx.setView(v);
         }
 
     // draw everything ...
@@ -204,7 +203,20 @@ void CCanvas::OnDraw()
         auto a = m_vDrawing[m_tCollision.nIndex];
         sf::RectangleShape rect(sf::Vector2f(a.a.x, a.a.y));
         rect.move(a.b.x,a.b.y);
-        rect.setFillColor(FillColor(150, 50, 50));
+        rect.setFillColor(FillColor(250,250,250));
+        rect.setOutlineColor(FillColor(0, 0, 0));
+        rect.setOutlineThickness(2.f);
+        m_oCtx.draw(rect);
+
+        rect.setSize({a.a.x, 64});
+        rect.setFillColor(FillColor(225,225,225));
+        rect.setOutlineThickness(0.f);
+        m_oCtx.draw(rect);
+
+        rect.setSize({a.a.x, 32});
+        rect.setFillColor(FillColor(200,200,200));
+        rect.setOutlineColor(FillColor(0, 0, 0));
+        rect.setOutlineThickness(2.f);
         m_oCtx.draw(rect);
 
         rect.setFillColor(FillColor(250, 250, 50));
@@ -225,14 +237,19 @@ void CCanvas::OnDraw()
         rect.move(       0, - a.a.y ); m_oCtx.draw(rect);
         rect.move( + a.a.x,       0 ); m_oCtx.draw(rect);
 */
+        m_tText.setString("File  Edit  View  Search  Help");
+        m_tText.setCharacterSize(20); // in pixels, not points!
+        m_tText.setFillColor(FillColor{0,0,0});
+        m_tText.setOrigin(-a.b.x-2,-a.b.y-34);
+        m_oCtx.draw(m_tText);
         }
 
     // draw buttons ...
     if ( m_vButtons.size() )
         {
-        text.setCharacterSize(36); // in pixels, not points!
-        text.setFillColor(FillColor{0,0,0});
-//        text.setStyle(sf::Text::Bold);
+        m_tText.setCharacterSize(36); // in pixels, not points!
+        m_tText.setFillColor(FillColor{0,0,0});
+//        m_tText.setStyle(sf::Text::Bold);
 
         sf::RectangleShape rect(sf::Vector2f(m_vButtons[0].a.x, m_vButtons[0].a.y));
         rect.move(8,8);
@@ -250,9 +267,9 @@ void CCanvas::OnDraw()
                 rect.setFillColor(FillColor(150, 150, 150));
             m_oCtx.draw(rect);
 
-            text.setString((char)(i+'a'));
-            text.setOrigin(i*-58 -25-text.getLocalBounds().width/2 , -8);
-            m_oCtx.draw(text);
+            m_tText.setString((char)(i+'a'));
+            m_tText.setOrigin(i*-58 -25-m_tText.getLocalBounds().width/2 , -8);
+            m_oCtx.draw(m_tText);
 
             rect.move(a.a.x+8,0);
             ++i;
@@ -270,15 +287,13 @@ void CCanvas::OnDraw()
     std::stringstream ss;
     ss << ctime(&timenow);
 
-
-    text.setFont(m_fFont);
-    text.setString(ss.str());
-    text.setCharacterSize(24); // in pixels, not points!
-    text.setFillColor(FillColor{0,0,250});
-//    text.setStyle(sf::Text::Bold | sf::Text::Underlined);
-//    text.setOrigin(s.x-text.getLocalBounds().width, 30);
-    text.setOrigin(text.getLocalBounds().width-s.x+8, -8);
-    m_oCtx.draw(text);
+    m_tText.setString(ss.str());
+    m_tText.setCharacterSize(24); // in pixels, not points!
+    m_tText.setFillColor(FillColor{0,0,250});
+//    m_tText.setStyle(sf::Text::Bold | sf::Text::Underlined);
+//    m_tText.setOrigin(s.x-m_tText.getLocalBounds().width, 30);
+    m_tText.setOrigin(m_tText.getLocalBounds().width-s.x+8, -8);
+    m_oCtx.draw(m_tText);
 
     // end the current frame
     m_oCtx.display();
