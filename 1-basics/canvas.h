@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <algorithm>    // std::swap
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Time.hpp>
 
@@ -50,26 +51,25 @@ struct SRect
 
     template<typename T, typename U>
     SRect(T const & s, U const & p)
-        : a{(float)(s.x),(float)(s.y)}, b{(float)(p.x),(float)(p.y)} {}
+        : a{(float)(s.x),(float)(s.y)}, b{(float)(p.x),(float)(p.y)}
+        {
+        if ( a.x < 0 ) { b.x += a.x; a.x = -a.x; }
+        if ( a.y < 0 ) { b.y += a.y; a.y = -a.y; }
+        }
 
     template<typename T, typename U>
     SRect(T const & w, T const & h, U const & x, U const & y)
-        : a{(float)w,(float)h}, b{(float)x,(float)y} {}
+        : a{(float)w,(float)h}, b{(float)x,(float)y}
+        {
+        if ( a.x < 0 ) { b.x += a.x; a.x = -a.x; }
+        if ( a.y < 0 ) { b.y += a.y; a.y = -a.y; }
+        }
 
     bool Inside(SPoint const & p) const
         {
-        return (
-                 (
-                 ((a.x >= 0) && (p.x >= b.x && p.x <= (b.x + a.x ))) ||
-                 ((a.x <  0) && (p.x <= b.x && p.x >= (b.x + a.x )))
-                 )
+        return ( ((a.x >= 0) && (p.x >= b.x && p.x <= (b.x + a.x )))
                 &&
-                 (
-                 ((a.y >= 0) && (p.y >= b.y && p.y <= (b.y + a.y ))) ||
-                 ((a.y <  0) && (p.y <= b.y && p.y >= (b.y + a.y )))
-                 )
-               );
-
+                 ((a.y >= 0) && (p.y >= b.y && p.y <= (b.y + a.y ))));
         }
     };
 

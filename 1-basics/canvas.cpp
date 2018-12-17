@@ -19,8 +19,6 @@ template<typename P, typename R>
 
 bool CCanvas::Collision(SPoint const & tPoint)
     {
-    m_tCollision.eWhat  = SCollision::EWhat::none;
-
     int i{0};
     for ( auto & a:m_vButtons )
         {
@@ -35,6 +33,19 @@ bool CCanvas::Collision(SPoint const & tPoint)
             }
         ++i;
         }
+
+    if ( m_tCollision.eWhat == SCollision::EWhat::Drawing)
+        {
+        if ( Inside(tPoint, m_vDrawing[m_tCollision.nIndex]) )
+            {
+//          std::cout << "kept " << i << std::endl; 
+            m_tCollision.tWhere  = tPoint;
+            m_tCollision.tOffset = tPoint - m_vDrawing[m_tCollision.nIndex].a;
+            return std::move(true);
+            }
+        }
+
+    m_tCollision.eWhat  = SCollision::EWhat::none;
 
     i = 0;
     for ( auto & a:m_vDrawing )
