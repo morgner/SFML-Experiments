@@ -3,7 +3,7 @@
 int main()
     {
     sf::ContextSettings settings;
-                        settings.antialiasingLevel = 0;
+                        settings.antialiasingLevel = 14;
 
     sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
     sf::RenderWindow window(sf::VideoMode(800, 600), "SFML window");
