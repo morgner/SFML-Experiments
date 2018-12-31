@@ -6,7 +6,7 @@ int main()
                         settings.antialiasingLevel = 14;
 
     sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
-    sf::RenderWindow window(sf::VideoMode(800,600), "SFML window");
+    sf::RenderWindow window(sf::VideoMode(800,600), "SFML Demo: Mines");
 //                   window.create(sf::VideoMode::getDesktopMode(), "SFML window", sf::Style::Fullscreen);
                      window.setFramerateLimit(60);
 

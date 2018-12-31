@@ -115,7 +115,8 @@ class CCanvas
               m_oCtx(ctx)
             {
             m_fTicker.launch();
-            m_bHasFont = m_fFont.loadFromFile("/usr/share/texlive/texmf-dist/fonts/opentype/public/fira/FiraSans-Regular.otf");
+//          m_bHasFont = m_fFont.loadFromFile("/usr/share/texlive/texmf-dist/fonts/opentype/public/fira/FiraSans-Regular.otf");
+            m_bHasFont = m_fFont.loadFromFile("FiraSans-Regular.otf");
             m_tText.setFont(m_fFont);
             }
 
