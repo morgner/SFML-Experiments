@@ -11,7 +11,7 @@ EN="SFML-$SD"
 # sfml-audio.pc
 # sfml-network.pc
 
-clang `pkg-config --libs --cflags sfml-window sfml-graphics` -g -std=c++2a -lstdc++ -lm *.cpp -o "$EN"
+clang `pkg-config --libs --cflags sfml-window sfml-graphics gl glu` -g -std=c++2a -lstdc++ -lm *.cpp -o "$EN"
 
 if [[ $? -eq 0 ]]
     then

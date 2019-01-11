@@ -22,7 +22,7 @@ template<typename P, typename R>
 bool CCanvas::Collision(SPoint const & tPoint)
     {
     int i{0};
-    for ( auto & a:m_vButtons )
+    for ( auto const & a:m_vButtons )
         {
         if ( Inside(tPoint, a) )
             {
@@ -53,7 +53,6 @@ bool CCanvas::Collision(SPoint const & tPoint)
             }
         ++i;
         }
-
     return false;
     }
 
