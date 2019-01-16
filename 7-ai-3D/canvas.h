@@ -125,9 +125,10 @@ struct SBoard
 
 struct SPawn
     {
-    bool      ob{true}; // on board
     SPosition p;
     };
+
+using VSPawns=std::vector<SPawn>;
 
 
 class CCanvas
@@ -205,6 +206,10 @@ class CCanvas
         GLuint chest{0};
         GLuint walle{0};
         GLuint winnr{0};
+        GLuint activ{0};
+
+        uint32_t iActiv{0};
+        VSPawns vPawns{};
 
         float  m_fRotateX{0};
         float  m_fRotateY{0};
@@ -214,13 +219,18 @@ class CCanvas
 
         enum class EDirection
             {
+            upleft,
             up,
+            upup,
+            upright,
             left,
             down,
             right,
             };
 
-    VSMoves PossibleMoves(SBoard const & crtBoard, SPawn const & crtPawn) const;
+        int Move(SBoard const & b, SPawn const & p, CCanvas::EDirection const & e) const;
+
+        VSMoves PossibleMoves(SBoard const & crtBoard, SPawn const & crtPawn) const;
         bool Drag(SBoard const & crtBoard, SPawn const & crtPawn);
         void DrawBoard(SBoard const & crtBoard);
 

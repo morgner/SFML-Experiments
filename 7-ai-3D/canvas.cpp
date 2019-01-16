@@ -6,6 +6,7 @@
 #include <math.h>
 #include <random>
 #include <GL/glu.h>
+#include <unistd.h> // usleep
 
 
 template<typename P, typename T>
@@ -42,40 +43,75 @@ void CCanvas::Event(sf::Event const & event)
     if (event.type == sf::Event::KeyPressed)
         {
         m_cKeyDown = 'a'+event.key.code; // m_bPAniAutoStop = false;
+
         if (event.key.shift)
             {
+	    switch (event.key.code)
+		{
+		case 73: break; // up
+		case 74: break; // down
+		case 71: break; // left
+		case 72: break; // right
+		case 60: iActiv = (iActiv == 0) ? vPawns.size()-1 : iActiv-1; break; // tab
+		default:
+		    std::cout << event.key.code << ", " << m_cKeyDown << '\n';
+		}
+
             switch (m_cKeyDown)
                 {
                 case 'a': break;
                 case 's': m_bShowField = !m_bShowField; break;
                 case 'd': break;
                 case 'f': break;
-
+                case 'u': 
                 case 'i': 
-                case 'j': 
-                case 'k': 
-                case 'l': Startsquence(m_cKeyDown); break;
+                case 'j': m_cKeyDown='J';
+                case 'o': 
+		case 'k': 
+                case 'l': m_tPengi.cCurrentMove=m_cKeyDown; break;
                 case 'n': StartLevel(1); break;
                 case 'm': break;
                 case 'w': Win(); break;
                 case 'x': ++m_fRotateX; break;
                 case 'y': ++m_fRotateY; break;
                 case 'z': ++m_fRotateZ; break;
-
                 }
             }
         else
             {
-            switch (m_cKeyDown)
+	    switch (event.key.code)
+		{
+		case 27: StartLevel(1); break;
+		case 28: StartLevel(2); break;
+		case 29: StartLevel(3); break;
+		case 30: StartLevel(4); break;
+		case 31: StartLevel(5); break;
+		case 32: StartLevel(6); break;
+		case 33: StartLevel(7); break;
+		case 34: StartLevel(8); break;
+		case 35: StartLevel(9); break;
+
+		case 73: break; // up
+		case 74: break; // down
+		case 71: break; // left
+		case 72: break; // right
+		case 60: ++iActiv; if (iActiv >= vPawns.size()) iActiv = 0; break; // tab
+		default:
+		    std::cout << event.key.code << ", " << m_cKeyDown << '\n';
+		}
+
+	    switch (m_cKeyDown)
                 {
                 case 'a': break;
                 case 's': m_bShowField = !m_bShowField; break;
                 case 'd': break;
                 case 'f': break;
+                case 'u': 
                 case 'i': 
                 case 'j': 
-                case 'k': 
-                case 'l': Startsquence(m_cKeyDown); break;
+                case 'o': 
+		case 'k': 
+                case 'l': m_tPengi.cCurrentMove=m_cKeyDown; break;
                 case 'n': StartLevel(0); break;
                 case 'm': break;
                 case 'x': --m_fRotateX; break;
@@ -83,55 +119,6 @@ void CCanvas::Event(sf::Event const & event)
                 case 'z': --m_fRotateZ; break;
                 case 'r': m_fRotateX = 0.f; m_fRotateY = 0.f; m_fRotateZ = 0.f; break;
                 }
-            }
-        }
-    if (event.type == sf::Event::MouseButtonPressed)
-        {
-/*
-        if (event.mouseButton.button == sf::Mouse::Left)
-            {
-            m_tMouseEventLeft = 
-                SMouse{true, 
-                       m_oCtx.mapPixelToCoords(
-                            sf::Vector2i{event.mouseButton.x,
-                                         event.mouseButton.y})};
-            }
-*/
-/*
-        if (event.mouseButton.button == sf::Mouse::Right)
-            {
-            m_tMouseEventRight = 
-                SMouse{true, 
-                       m_oCtx.mapPixelToCoords(
-                            sf::Vector2i{event.mouseButton.x,
-                                         event.mouseButton.y})};
-            }
-*/
-        }
-
-    if (event.type == sf::Event::MouseWheelScrolled)
-        {
-//        auto v (m_oCtx.getView());
-//        v.zoom( (event.mouseWheelScroll.delta > 0.0f) ? .9f : 1.1f );
-//        m_oCtx.setView(v);
-        }
-
-    if (event.type == sf::Event::MouseButtonReleased)
-        {
-        m_tMousePos = event.mouseButton;
-        if (event.mouseButton.button == sf::Mouse::Left)
-            {
-            m_tMouseEventLeft.d = false;
-            if ( m_tCollision.eWhat  == SCollision::EWhat::Button )
-                {
-                DoButtonAction( m_tCollision.nIndex );
-                }
-
-            }
-        if (event.mouseButton.button == sf::Mouse::Right)
-            {
-            m_tMouseEventRight.d = false;
-            m_vDrawing.emplace_back( m_tMouseEventRight.p - m_tMousePos, m_tMousePos );
             }
         }
     }
@@ -162,8 +149,8 @@ void CCanvas::StartLevel(int i)
         case 2:m_tBoard  = {8,8};
                m_tOffset = { 0, 25 };
                maze =
-               "-X-X-X-X"
-               "X-X-P-X-"
+               "-X-XPX-X"
+               "X-X-X-X-"
                "-X-X-X-X"
                "X-X-X-X-"
                "-X-X-X-X"
@@ -201,10 +188,10 @@ void CCanvas::StartLevel(int i)
 
         default:m_tBoard = {6,6};
                 maze =
+                "-X-XPX"
+                "X-X-X-"
                 "-X-X-X"
-                "X-X-P-"
-                "-X-X-X"
-                "X-A-X-"
+                "X-XAX-"
                 "-X-X-X"
                 "X-X-X-"
                 ;
@@ -260,6 +247,36 @@ int CCanvas::Move(std::string const & sWorld,
     }
 
 
+
+int CCanvas::Move(SBoard const & b, SPawn const & p, CCanvas::EDirection const & e) const
+    {
+    long i{0}, i0{p.p.x + b.tTotalDimension.x * p.p.y};
+    switch ( e )
+        {
+        case CCanvas::EDirection::upleft : i = i0   -1 +  b.tTotalDimension.x;  break;
+        case CCanvas::EDirection::up     : i = i0      +  b.tTotalDimension.x;  break;
+        case CCanvas::EDirection::upup   : i = i0      +2*b.tTotalDimension.x;  break;
+        case CCanvas::EDirection::upright: i = i0   +1 +  b.tTotalDimension.x;  break;
+        case CCanvas::EDirection::left   : i = i0   -1                       ;  break;
+        case CCanvas::EDirection::down   : i = i0      -  b.tTotalDimension.x;  break;
+        case CCanvas::EDirection::right  : i = i0   +1                       ;  break;
+        }
+
+    VSMoves pm = PossibleMoves(b, p);
+
+    for ( auto const & a:pm )
+        {
+        if ( a.p.x + b.tTotalDimension.x * a.p.y == i )
+            {
+ // std::cout << p.p.x << ", " << p.p.y << " : " << b.tTotalDimension.x << "," << b.tTotalDimension.y << '\n';
+            return i;
+            }
+        }
+    return i0;
+    }
+
+
+
 struct SColor
     {
     float r{0}, g{0}, b{0};
@@ -306,7 +323,7 @@ VSMoves CCanvas::PossibleMoves(SBoard const & b, SPawn const & p) const
     auto i = p.p.x + p.p.y * y;
 
     auto id = i + 1*y;
-    if ( ( id < l ) && ( b.sSituation[id] != 'A' ) )
+    if ( ( id < l ) && ( b.sSituation[id] != 'A' ) && ( b.sSituation[id] != 'P' ) )
         {
         tMoves.emplace_back( SPosition{id%y, id/y}, 0.0, -1 );
 
@@ -480,7 +497,8 @@ void CCanvas::OnDraw()
         monst = glGenLists(3); glNewList(monst, GL_COMPILE); g(13.0f,13.0f, 2.9f, ahhh, ahhh, ahhh, ahhh, ahhh, ahhh ); glEndList(); // weissfeld
         chest = glGenLists(4); glNewList(chest, GL_COMPILE); g( 6.5f, 6.5f, 9.5f, a333, a777, a333, a333, a333, a333 ); glEndList(); // graufigur
         walle = glGenLists(5); glNewList(walle, GL_COMPILE); g(14.0f,14.0f, 2.8f, a155, a155, a155, a155, a155, a155 ); glEndList(); // destination
-        winnr = glGenLists(6); glNewList(winnr, GL_COMPILE); g(14.0f,14.0f, 0.5f, a050, a050, a050, a050, a050, a050 ); glEndList();
+        winnr = glGenLists(6); glNewList(winnr, GL_COMPILE); g(14.0f,14.0f, 0.5f, a010, a010, a010, a010, a010, a010 ); glEndList();
+        activ = glGenLists(7); glNewList(activ, GL_COMPILE); g( 6.0f, 6.0f, 9.5f, a010, a010, a010, a010, a010, a010 ); glEndList(); // weissfigur
 
         //------------------------------------------------------ light
         // Enable light
@@ -517,7 +535,6 @@ void CCanvas::OnDraw()
     glRotatef(m_fRotateZ, 0.f, 0.f, 1.f);
     glRotatef(m_fRotateX, 1.f, 0.f, 0.f);
 
-    int i{0};
 /*
     m_bGameWon = true;
     int ic{0};
@@ -532,102 +549,96 @@ void CCanvas::OnDraw()
         }
 */
 
-    SPawn tPawn{ true, {1,1} };  
-    for ( int i{0},y{0}; y < m_tBoard.y; ++y )
+    vPawns.clear();
+    
+    SBoard tBoard{ {(uint32_t)m_tBoard.x,(uint32_t)m_tBoard.y}, // tTotalDimension
+//                 {"+++++++-X-P++X-X-++-X-X++X-X-+++++++"},    // sSituation
+//                 {"+++++++-X-X++X-X-++-X-X++X-X-+++++++"} };  // sDecoration
+                   maze,    // sSituation
+                   mzbg };  // sDecoration
+
+    for ( uint32_t i{0},y{0}; y < m_tBoard.y; ++y )
         {
-        for ( int x{0}; x < m_tBoard.x; ++x )
+        for ( uint32_t x{0}; x < m_tBoard.x; ++x )
             {
             glPushMatrix();
             glTranslatef( m_tOffset.x+(m_tField.x+5)*x, m_tOffset.y+(m_tField.y+5)*y, -00.f);
-            if ( mzbg[i++] == 'X' ) glCallList(monst); else glCallList(block);
+            if ( mzbg[i] == 'X' ) glCallList(monst); else glCallList(block);
+            if ( maze[i] == 'P' )
+        	{
+        	if ( vPawns.size() == iActiv ) glCallList(activ); else glCallList(pengi);
+        	vPawns.emplace_back(SPawn{x,y});
+        	}
+            if ( maze[i] == 'A' ) glCallList(chest);
             glPopMatrix();
+            ++i;
             }
         }
 
-
-
-    for ( int y{0}; y < m_tBoard.y; ++y )
+    for ( uint32_t i{0},y{0}; y < m_tBoard.y; ++y )
         {
-        for ( int x{0}; x < m_tBoard.x; ++x )
+        for ( uint32_t x{0}; x < m_tBoard.x; ++x )
             {
             glPushMatrix();
-            glTranslatef( m_tOffset.x+(m_tField.x+5)*x, m_tOffset.y+(m_tField.y+5)*y, -00.f);
             CCanvas::EDirection eDir{EDirection::up};
-            bool b{false};
-//            if ( mzbg[i] == 'X' ) glCallList(monst); else if ( mzbg[i] != '+' ) glCallList(block);
             switch ( maze[i] )
                 {
                 case ' ':   break;
-                case '+':   if ( m_bGameWon ) glCallList(winnr); else glCallList(walle); break;
-                case 'P':   switch ( m_tPengi.cCurrentMove )
+                case 'P':
+                    auto tPawn = vPawns[iActiv];
+                    if ( x==tPawn.p.x && y==tPawn.p.y )
+                	{
+			if ( m_tPengi.cCurrentMove )
+			    {
+			    switch ( m_tPengi.cCurrentMove )
+					{
+                                        case 'u': eDir = CCanvas::EDirection::upleft;   break;
+                                        case 'i': eDir = CCanvas::EDirection::up;       break;
+                                        case 'J': eDir = CCanvas::EDirection::upup;     break;
+                                        case 'o': eDir = CCanvas::EDirection::upright;  break;
+					case 'j': eDir = CCanvas::EDirection::left;     break;
+					case 'k': eDir = CCanvas::EDirection::down;     break;
+					case 'l': eDir = CCanvas::EDirection::right;    break;
+					}
+//			    int const nMove{Move(maze, m_tBoard, i, "-X", "", eDir )};
+                            int const nMove{Move(tBoard, tPawn, eDir)};
+    //			std::cout << tPawn.p.x << ", " << tPawn.p.y << '\n';
+
+			    if ( nMove != i )
                                 {
-                                case 'i': eDir = CCanvas::EDirection::up;    break;
-                                case 'j': eDir = CCanvas::EDirection::left;  break;
-                                case 'k': eDir = CCanvas::EDirection::down;  break;
-                                case 'l': eDir = CCanvas::EDirection::right; break;
+                                maze[nMove] = 'P';
+                                maze[i] = mzbg[i];
+                                tPawn.p = {i%(y+1), i/(y+1)};
                                 }
-    tPawn.p = {(uint32_t)x,
-               (uint32_t)y};  
-                            if ( m_bPAniJustStopped )
-                                {
-                                m_bPAniJustStopped = false;
-                                int const nMove{Move(maze, m_tBoard, i, "-XA", "A", eDir )};
-                    
-                                int d = nMove - i;
-                                if ( d != 0 )
-                                    {
-                                    if ( maze[nMove] == 'A' ) maze[nMove+d] = mzbg[nMove+d];
-                                    maze[nMove] = 'P'; maze[i] = mzbg[i];
-                                    }
-                    
-                                if ( m_cKeyDown ) Startsquence(m_cKeyDown); else m_tPengi.cCurrentMove = 0; 
-                                break;
-                                }
-                            if ( m_bPAnimating )
-                                {
-                                int const nMove{Move(maze, m_tBoard, i, "-XA", "A", eDir )};
-                                if ( nMove != i )
-                                    {
-                                    switch ( eDir )
-                                        {
-                                        case CCanvas::EDirection::up   : glTranslatef(  0, +m_dPAnimate*(m_tField.y+5), 0.f); break;
-                                        case CCanvas::EDirection::left : glTranslatef( -m_dPAnimate*(m_tField.x+5), 0 , 0.f); break;
-                                        case CCanvas::EDirection::down : glTranslatef(  0, -m_dPAnimate*(m_tField.y+5), 0.f); break;
-                                        case CCanvas::EDirection::right: glTranslatef( +m_dPAnimate*(m_tField.x+5), 0 , 0.f); break;
-                                        }
-                                    b = true;
-                                    glCallList(pengi);
-                                    }
-                                }
-                            if ( !b ) glCallList(pengi);
-                            break;
-                case 'X':   break;//glCallList(monst); break;
-                case 'A':   glCallList(chest); break;
-                default :   break;//glCallList(block); break;
+    //			std::cout << tPawn.p.x << ", " << tPawn.p.y << '\n';
+
+			    usleep(50000);
+			    }
+                    m_tPengi.cCurrentMove=0;
+                    break;
+                	}
                 }
             glPopMatrix();
             ++i;
             }
         }
 
-    SBoard tBoard{ {(uint32_t)m_tBoard.x,(uint32_t)m_tBoard.y}, // tTotalDimension
-//                 {"+++++++-X-P++X-X-++-X-X++X-X-+++++++"},    // sSituation
-//                 {"+++++++-X-X++X-X-++-X-X++X-X-+++++++"} };  // sDecoration
-                   maze,    // sSituation
-                   mzbg };  // sDecoration
-//  SPawn   tPawn{ true, {1,1} };  
-    VSMoves pm{PossibleMoves(tBoard, tPawn)};
-    for ( auto const & a:pm )
-        {
-// std::cout << tPawn.p.x << ", " << tPawn.p.y << " : " << a.p.x << "," << a.p.y << '\n';
-
-        glPushMatrix();
-        glTranslatef( m_tOffset.x+(m_tField.x+5)*a.p.x, m_tOffset.y+(m_tField.y+5)*a.p.y, -00.f);
-        glCallList(walle);
-        glPopMatrix();
-        }
+    int i{0};
+//    for ( auto const & tPawn:vPawns )
+    auto const & tPawn = vPawns[iActiv];
+	{
+	VSMoves pm{PossibleMoves(tBoard, tPawn)};
+	for ( auto const & a:pm )
+	    {
+    // std::cout << tPawn.p.x << ", " << tPawn.p.y << " : " << a.p.x << "," << a.p.y << '\n';
+	    glPushMatrix();
+	    glTranslatef( m_tOffset.x+(m_tField.x+5)*a.p.x, m_tOffset.y+(m_tField.y+5)*a.p.y, -00.f);
+	    glCallList(walle);
+	    glPopMatrix();
+	    }
+	++i;
+	}
     // end the current frame
     m_oCtx.display();
 
     }
-
