@@ -12,7 +12,7 @@
 
 struct SPoint
     {
-    float x{.0}, y{0};
+    float x{0}, y{0};
 
     SPoint() = default;
 
@@ -95,7 +95,7 @@ struct SMouse
 
 struct SPosition
     {
-    uint32_t x{0},y{0};
+    int x{0},y{0};
     };
 
 struct SMove
@@ -110,7 +110,7 @@ using VSMoves=std::vector<SMove>;
 
 struct SBoard
     {
-    SPosition   tTotalDimension{4,4};
+    SPoint     tTotalDimension{4,4};
 
     std::string sSituation {"PPPP"
                             "-X-X"
@@ -125,7 +125,13 @@ struct SBoard
 
 struct SPawn
     {
-    SPosition p;
+    SPoint p{.0f,.0f};
+
+    SPawn() = default;
+
+    template<typename T>
+    SPawn(T const & x, T const & y) : p{(float)x,(float)y} {}
+
     };
 
 using VSPawns=std::vector<SPawn>;
@@ -200,16 +206,18 @@ class CCanvas
         SPoint m_tField{23,23};
 
         // display lists
-        GLuint block{0};
-        GLuint pengi{0};
-        GLuint monst{0};
-        GLuint chest{0};
-        GLuint walle{0};
-        GLuint winnr{0};
-        GLuint activ{0};
+        GLuint m_nFieldBlack{0};
+        GLuint m_nFigurWhite{0};
+        GLuint m_nFieldWhite{0};
+        GLuint m_nFigurBlack{0};
+        GLuint m_nFrameRed{0};
+        GLuint m_nFrameGreen{0};
+        GLuint m_nFigurActive{0};
 
-        uint32_t iActiv{0};
-        VSPawns vPawns{};
+
+        int      iActivWhite{0};
+        int      iActivBlack{0};
+        VSPawns  vPawns{};
 
         float  m_fRotateX{0};
         float  m_fRotateY{0};
@@ -228,8 +236,7 @@ class CCanvas
             right,
             };
 
-        int Move(SBoard const & b, SPawn const & p, CCanvas::EDirection const & e) const;
-
+        int Move(SBoard const & b, SPawn const & p, EDirection const & e) const;
         VSMoves PossibleMoves(SBoard const & crtBoard, SPawn const & crtPawn) const;
         bool Drag(SBoard const & crtBoard, SPawn const & crtPawn);
         void DrawBoard(SBoard const & crtBoard);
@@ -237,6 +244,7 @@ class CCanvas
 
         struct SPengi
             {
+            bool        bActive;
             std::string sPossibleMoves{"ijkl"};
             char        cCurrentMove{0};
             } m_tPengi;
@@ -293,14 +301,6 @@ class CCanvas
         void StartLevel(int const i);
 
         void Win();
-
-        int Move(std::string const & sWorld,
-                 SPoint const      & tBoard,
-                 int const         & nWorldIndex,
-                 std::string const & allowedFields, /*"-XA"*/
-                 std::string const & hasToMove,     /*"A"*/
-                 CCanvas::EDirection const & e,
-                 bool const bRecursion = true);
 
         void Startsquence(char c)
             {

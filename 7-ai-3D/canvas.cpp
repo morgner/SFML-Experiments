@@ -52,7 +52,7 @@ void CCanvas::Event(sf::Event const & event)
 		case 74: break; // down
 		case 71: break; // left
 		case 72: break; // right
-		case 60: iActiv = (iActiv == 0) ? vPawns.size()-1 : iActiv-1; break; // tab
+		case 60: iActivWhite = (iActivWhite == 0) ? vPawns.size()-1 : iActivWhite-1; break; // tab
 		default:
 		    std::cout << event.key.code << ", " << m_cKeyDown << '\n';
 		}
@@ -65,7 +65,7 @@ void CCanvas::Event(sf::Event const & event)
                 case 'f': break;
                 case 'u': 
                 case 'i': 
-                case 'j': m_cKeyDown='J';
+                case 'j': if ( m_cKeyDown == 'j' )m_cKeyDown='J'; 
                 case 'o': 
 		case 'k': 
                 case 'l': m_tPengi.cCurrentMove=m_cKeyDown; break;
@@ -95,7 +95,7 @@ void CCanvas::Event(sf::Event const & event)
 		case 74: break; // down
 		case 71: break; // left
 		case 72: break; // right
-		case 60: ++iActiv; if (iActiv >= vPawns.size()) iActiv = 0; break; // tab
+		case 60: ++iActivWhite; if (iActivWhite >= (int)vPawns.size()) iActivWhite = 0; break; // tab
 		default:
 		    std::cout << event.key.code << ", " << m_cKeyDown << '\n';
 		}
@@ -217,40 +217,9 @@ void CCanvas::Win()
     }
 
 
-int CCanvas::Move(std::string const & sWorld,
-         SPoint const      & tBoard,
-         int const         & nWorldIndex,
-         std::string const & allowedFields, /*"-XA"*/
-         std::string const & hasToMove, /*"A"*/
-         CCanvas::EDirection const & e,
-         bool bRecursion)
-    {
-    int i{nWorldIndex};
-
-    switch ( e )
-        {
-        case CCanvas::EDirection::up    : i = nWorldIndex +tBoard.x; break;
-        case CCanvas::EDirection::left  : i = nWorldIndex        -1; break;
-        case CCanvas::EDirection::down  : i = nWorldIndex -tBoard.x; break;
-        case CCanvas::EDirection::right : i = nWorldIndex        +1; break;
-        }
-
-    if ( (i < (int)sWorld.length()) && (i >= 0) && (allowedFields.find(sWorld[i]) != std::string::npos) )
-        {
-        if ( bRecursion && sWorld[i] == 'A' ) 
-            if ( Move(sWorld, tBoard, i, "-X", "", e, false) == i ) return nWorldIndex;
-        }
-    else
-        return nWorldIndex;
-
-    return i;
-    }
-
-
-
 int CCanvas::Move(SBoard const & b, SPawn const & p, CCanvas::EDirection const & e) const
     {
-    long i{0}, i0{p.p.x + b.tTotalDimension.x * p.p.y};
+    int i{0}, i0{(int)p.p.x + (int)b.tTotalDimension.x * (int)p.p.y};
     switch ( e )
         {
         case CCanvas::EDirection::upleft : i = i0   -1 +  b.tTotalDimension.x;  break;
@@ -318,11 +287,11 @@ struct SMaterial
 VSMoves CCanvas::PossibleMoves(SBoard const & b, SPawn const & p) const
     {
     VSMoves tMoves{};
-    auto y = b.tTotalDimension.x;
-    auto l = b.sSituation.length();
-    auto i = p.p.x + p.p.y * y;
+    int  y = b.tTotalDimension.x;	// width of the board
+    int  l = b.sSituation.length();	// stellung
+    int  i = p.p.x + p.p.y * y;		// input position
 
-    auto id = i + 1*y;
+    int  id = i + 1*y;
     if ( ( id < l ) && ( b.sSituation[id] != 'A' ) && ( b.sSituation[id] != 'P' ) )
         {
         tMoves.emplace_back( SPosition{id%y, id/y}, 0.0, -1 );
@@ -492,13 +461,13 @@ void CCanvas::OnDraw()
         init = true;
         //------------------------------------------------------ objects
         //                                                                              top
-        block = glGenLists(1); glNewList(block, GL_COMPILE); g(13.0f,13.0f, 2.9f, addd, addd, addd, addd, addd, addd ); glEndList(); // graufeld
-        pengi = glGenLists(2); glNewList(pengi, GL_COMPILE); g( 6.0f, 6.0f, 9.5f, a777, a111, a777, a777, a777, a777 ); glEndList(); // weissfigur
-        monst = glGenLists(3); glNewList(monst, GL_COMPILE); g(13.0f,13.0f, 2.9f, ahhh, ahhh, ahhh, ahhh, ahhh, ahhh ); glEndList(); // weissfeld
-        chest = glGenLists(4); glNewList(chest, GL_COMPILE); g( 6.5f, 6.5f, 9.5f, a333, a777, a333, a333, a333, a333 ); glEndList(); // graufigur
-        walle = glGenLists(5); glNewList(walle, GL_COMPILE); g(14.0f,14.0f, 2.8f, a155, a155, a155, a155, a155, a155 ); glEndList(); // destination
-        winnr = glGenLists(6); glNewList(winnr, GL_COMPILE); g(14.0f,14.0f, 0.5f, a010, a010, a010, a010, a010, a010 ); glEndList();
-        activ = glGenLists(7); glNewList(activ, GL_COMPILE); g( 6.0f, 6.0f, 9.5f, a010, a010, a010, a010, a010, a010 ); glEndList(); // weissfigur
+        m_nFieldBlack  = glGenLists(1); glNewList(m_nFieldBlack,  GL_COMPILE); g(13.0f,13.0f, 2.9f, addd, addd, addd, addd, addd, addd ); glEndList(); // graufeld
+        m_nFigurWhite  = glGenLists(2); glNewList(m_nFigurWhite,  GL_COMPILE); g( 6.0f, 6.0f, 9.5f, a777, a111, a777, a777, a777, a777 ); glEndList(); // weissfigur
+        m_nFieldWhite  = glGenLists(3); glNewList(m_nFieldWhite,  GL_COMPILE); g(13.0f,13.0f, 2.9f, ahhh, ahhh, ahhh, ahhh, ahhh, ahhh ); glEndList(); // weissfeld
+        m_nFigurBlack  = glGenLists(4); glNewList(m_nFigurBlack,  GL_COMPILE); g( 6.5f, 6.5f, 9.5f, a333, a777, a333, a333, a333, a333 ); glEndList(); // graufigur
+        m_nFrameRed    = glGenLists(5); glNewList(m_nFrameRed,    GL_COMPILE); g(14.0f,14.0f, 2.8f, a155, a155, a155, a155, a155, a155 ); glEndList(); // destination
+        m_nFrameGreen  = glGenLists(6); glNewList(m_nFrameGreen,  GL_COMPILE); g(14.0f,14.0f, 0.5f, a010, a010, a010, a010, a010, a010 ); glEndList();
+        m_nFigurActive = glGenLists(7); glNewList(m_nFigurActive, GL_COMPILE); g( 6.0f, 6.0f, 9.5f, a010, a010, a010, a010, a010, a010 ); glEndList(); // weissfigur
 
         //------------------------------------------------------ light
         // Enable light
@@ -551,33 +520,33 @@ void CCanvas::OnDraw()
 
     vPawns.clear();
     
-    SBoard tBoard{ {(uint32_t)m_tBoard.x,(uint32_t)m_tBoard.y}, // tTotalDimension
+    SBoard tBoard{ {m_tBoard.x,m_tBoard.y}, // tTotalDimension
 //                 {"+++++++-X-P++X-X-++-X-X++X-X-+++++++"},    // sSituation
 //                 {"+++++++-X-X++X-X-++-X-X++X-X-+++++++"} };  // sDecoration
                    maze,    // sSituation
                    mzbg };  // sDecoration
 
-    for ( uint32_t i{0},y{0}; y < m_tBoard.y; ++y )
+    for ( int i{0},y{0}; y < m_tBoard.y; ++y )
         {
-        for ( uint32_t x{0}; x < m_tBoard.x; ++x )
+        for ( int x{0}; x < m_tBoard.x; ++x )
             {
             glPushMatrix();
             glTranslatef( m_tOffset.x+(m_tField.x+5)*x, m_tOffset.y+(m_tField.y+5)*y, -00.f);
-            if ( mzbg[i] == 'X' ) glCallList(monst); else glCallList(block);
+            if ( mzbg[i] == 'X' ) glCallList(m_nFieldWhite); else glCallList(m_nFieldBlack);
             if ( maze[i] == 'P' )
         	{
-        	if ( vPawns.size() == iActiv ) glCallList(activ); else glCallList(pengi);
-        	vPawns.emplace_back(SPawn{x,y});
+        	if ( (int)vPawns.size() == iActivWhite ) glCallList(m_nFigurActive); else glCallList(m_nFigurWhite);
+        	vPawns.emplace_back(x,y);
         	}
-            if ( maze[i] == 'A' ) glCallList(chest);
+            if ( maze[i] == 'A' ) glCallList(m_nFigurBlack);
             glPopMatrix();
             ++i;
             }
         }
 
-    for ( uint32_t i{0},y{0}; y < m_tBoard.y; ++y )
+    for ( int i{0},y{0}; y < m_tBoard.y; ++y )
         {
-        for ( uint32_t x{0}; x < m_tBoard.x; ++x )
+        for ( int x{0}; x < m_tBoard.x; ++x )
             {
             glPushMatrix();
             CCanvas::EDirection eDir{EDirection::up};
@@ -585,7 +554,7 @@ void CCanvas::OnDraw()
                 {
                 case ' ':   break;
                 case 'P':
-                    auto tPawn = vPawns[iActiv];
+                    auto tPawn = vPawns[iActivWhite];
                     if ( x==tPawn.p.x && y==tPawn.p.y )
                 	{
 			if ( m_tPengi.cCurrentMove )
@@ -625,15 +594,15 @@ void CCanvas::OnDraw()
 
     int i{0};
 //    for ( auto const & tPawn:vPawns )
-    auto const & tPawn = vPawns[iActiv];
+    auto const & tPawn = vPawns[iActivWhite];
 	{
 	VSMoves pm{PossibleMoves(tBoard, tPawn)};
 	for ( auto const & a:pm )
 	    {
-    // std::cout << tPawn.p.x << ", " << tPawn.p.y << " : " << a.p.x << "," << a.p.y << '\n';
+//          std::cout << tPawn.p.x << ", " << tPawn.p.y << " : " << a.p.x << "," << a.p.y << '\n';
 	    glPushMatrix();
 	    glTranslatef( m_tOffset.x+(m_tField.x+5)*a.p.x, m_tOffset.y+(m_tField.y+5)*a.p.y, -00.f);
-	    glCallList(walle);
+	    glCallList(m_nFrameRed);
 	    glPopMatrix();
 	    }
 	++i;
