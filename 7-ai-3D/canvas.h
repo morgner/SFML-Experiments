@@ -98,40 +98,43 @@ struct SPosition
     int x{0},y{0};
     };
 
+struct SSize
+    {
+    int x{0},y{0};
+    };
+
 struct SMove
     {
     SPosition p;
-    double    value{.0};
+    double    v{.0}; // value
     int32_t   remove{-1};
-    SMove(SPosition const & p, double const & value, int32_t const & remove):p(p),value(value),remove(remove){};
+    SMove(SPosition const & p, double const & v, int32_t const & remove):p(p),v(v),remove(remove){};
     };
 
 using VSMoves=std::vector<SMove>;
 
 struct SBoard
     {
-    SPoint     tTotalDimension{4,4};
-
-    std::string sSituation {"PPPP"
-                            "-X-X"
-                            "X-X-"
-                            "AAAA"};
-
-    std::string sDecoration{"-X-X"
-                            "X-X-"
-                            "-X-X"
-                            "X-X-"};
+    SSize	d{5,5};				// dimension
+    std::string g{"PPPPP.-.-.-.-.-.-.-.AAAAA"};	// game
+    std::string b{"-X-X-X-X-X-X-X-X-X-X-X-X-"}; // board
     };
+
+struct SStep
+    {
+    std::string g;
+    SMove     	m;
+    };
+
+using VSSteps=std::vector<SStep>;
+
 
 struct SPawn
     {
-    SPoint p{.0f,.0f};
-
-    SPawn() = default;
+    SPosition p{0,0};
 
     template<typename T>
-    SPawn(T const & x, T const & y) : p{(float)x,(float)y} {}
-
+	SPawn(T const & x, T const & y) : p{(int)x,(int)y} {}
     };
 
 using VSPawns=std::vector<SPawn>;
@@ -146,11 +149,11 @@ class CCanvas
         CCanvas(sf::Window & ctx)
             : m_oCtx(ctx),
 	      m_fTicker(&CCanvas::fTicker, this),
-              m_fPengi(&CCanvas::fPengi, this)
+              m_fFigur(&CCanvas::fFigur, this)
             {
             StartLevel(0);
             m_fTicker.launch();
-            m_fPengi.launch();
+            m_fFigur.launch();
             m_bHasFont = m_fFont.loadFromFile("FiraSans-Regular.otf");
             m_tText.setFont(m_fFont);
             }
@@ -160,7 +163,7 @@ class CCanvas
             m_bAnimating = false;
             m_bPAnimating = false;
             m_fTicker.wait();
-            m_fPengi.wait();
+            m_fFigur.wait();
             }
 
         void OnDraw();
@@ -178,7 +181,7 @@ class CCanvas
             FillColor(sf::Uint8 const & r,sf::Uint8 const & g,sf::Uint8 const & b)
                 : r(r),g(g),b(b) {}
 
-            operator sf::Color()
+            operator sf::Color() const
                 {
                 if ( m_bHasFocus )
                     {
@@ -195,8 +198,6 @@ class CCanvas
         bool Collision(SPoint const & tPoint);
         void Event(sf::Event const & event);
 
-        void DoButtonAction(int const & n);
-
     public:
         bool   m_bShowField{false};
         bool   m_bGameOver{false};
@@ -206,18 +207,20 @@ class CCanvas
         SPoint m_tField{23,23};
 
         // display lists
-        GLuint m_nFieldBlack{0};
-        GLuint m_nFigurWhite{0};
-        GLuint m_nFieldWhite{0};
-        GLuint m_nFigurBlack{0};
-        GLuint m_nFrameRed{0};
-        GLuint m_nFrameGreen{0};
-        GLuint m_nFigurActive{0};
+        GLuint const m_nFieldBlack { glGenLists(1) };
+        GLuint const m_nFigurWhite { glGenLists(2) };
+        GLuint const m_nFieldWhite { glGenLists(3) };
+        GLuint const m_nFigurBlack { glGenLists(4) };
+        GLuint const m_nFrameRed   { glGenLists(5) };
+        GLuint const m_nFrameGreen { glGenLists(6) };
+        GLuint const m_nFigurRed   { glGenLists(7) };
+        GLuint const m_nFigurGreen { glGenLists(8) };
 
 
-        int      iActivWhite{0};
-        int      iActivBlack{0};
-        VSPawns  vPawns{};
+        int      m_iActivWhite{0};
+        int      m_iActivBlack{0};
+        VSPawns  m_vPawnsWhite{};
+        VSPawns  m_vPawnsBlack{};
 
         float  m_fRotateX{0};
         float  m_fRotateY{0};
@@ -227,6 +230,7 @@ class CCanvas
 
         enum class EDirection
             {
+            none,
             upleft,
             up,
             upup,
@@ -236,9 +240,32 @@ class CCanvas
             right,
             };
 
-        int Move(SBoard const & b, SPawn const & p, EDirection const & e) const;
-        VSMoves PossibleMoves(SBoard const & crtBoard, SPawn const & crtPawn) const;
-        bool Drag(SBoard const & crtBoard, SPawn const & crtPawn);
+        void DumpBoard(size_t const & width, std::string const & sBoard) const
+            {
+            std::cout << '\n';
+            for ( size_t is{sBoard.size()-(size_t)width}; is>0 ; is-=width )
+        	{
+        	std::cout << "   " << sBoard.substr(is, width) << '\n';
+        	}
+            }
+
+        VSSteps m_tGameRecord;
+
+        void DumpGame()
+            {
+            for ( auto const & a:m_tGameRecord )
+        	{
+        	std::cout << "{ G: {" << a.g << "}, X: " << a.m.p.x << ", Y: " << a.m.p.y << ", V: " << a.m.v << "}" << '\n';
+        	}
+            }
+
+        SBoard m_tBoard;
+
+        int MoveWhite(SPawn const & p, EDirection const & e) const;
+        int MoveBlack(SPawn const & p, EDirection const & e) const;
+        VSMoves PossibleMovesWhite(SPawn const & crtPawn) const;
+        VSMoves PossibleMovesBlack(SPawn const & crtPawn) const;
+        bool Drag(SPawn const & crtPawn);
         void DrawBoard(SBoard const & crtBoard);
 
 
@@ -248,11 +275,6 @@ class CCanvas
             std::string sPossibleMoves{"ijkl"};
             char        cCurrentMove{0};
             } m_tPengi;
-
-        SPoint m_tBoard{0,0};
-        std::string maze = "";
-        std::string mzbg = "";
-
 
         static bool m_bHasFocus;
         bool m_bHasFont{false};
@@ -311,16 +333,16 @@ class CCanvas
             m_tPengi.cCurrentMove = c;
             m_bPAnimating = true;
             m_bPAniJustStopped = false;
-            m_fPengi.launch();
+            m_fFigur.launch();
             }
 
-        bool  m_bPAnimating{false};
+        bool  m_bPAnimating{true};
         bool  m_bPAniAutoStop{true};
         bool  m_bPAniJustStopped{false};
         float m_dPAnimate{.0};
         float m_dPAnimateStep{.025};
 
-        void fPengi()
+        void fFigur()
             {
             while (m_bPAnimating)
                 {
@@ -337,7 +359,7 @@ class CCanvas
             }
 
         sf::Thread m_fTicker;
-        sf::Thread m_fPengi;
+        sf::Thread m_fFigur;
     };
 
 // CANVAS_H
