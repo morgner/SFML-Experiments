@@ -10,6 +10,7 @@
 #include <GL/glu.h>
 #include <unistd.h> // usleep
 #include <random>
+#include <utility>
 
 
 template<typename P, typename T>
@@ -129,7 +130,9 @@ void CCanvas::Event(sf::Event const & event)
 
 void CCanvas::StartLevel(int const i)
     {
-    m_tGameRecord.clear();
+    m_tGameWhite.clear();
+    m_tGameBlack.clear();
+
     m_tOffset = {25,50};
     switch (i)
         {
@@ -458,19 +461,23 @@ void CCanvas::OnDraw()
 				case 'k': eDir = CCanvas::EDirection::down;     break;
 				case 'l': eDir = CCanvas::EDirection::right;    break;
 				}
+			    m_tPengi.cCurrentMove=0;
 			    int nMove{MoveWhite(tPawn, eDir)};
 			    if ( nMove != i )
 				{
-				std::cout << "W: " << tPawn.p.x << ", " << tPawn.p.y << " => ";
-				m_tBoard.g[nMove] = 'P';
-				m_tBoard.g[i] = m_tBoard.b[i];
-				int y=m_tBoard.d.x;
-				tPawn.p = {nMove%(y), nMove/(y)};
-				std::cout << "W: (" << nMove << ") " << tPawn.p.x << ", " << tPawn.p.y << '\n';
+				SPosition const fp{i%(m_tBoard.d.x), i/(m_tBoard.d.x)}; // from pos
+				tPawn.p = {nMove%(m_tBoard.d.x), nMove/(m_tBoard.d.x)}; // to   pos
+		        	m_tGameWhite.emplace_back(SStep{m_tBoard.g, fp, tPawn.p, .1});
 
-				m_tPengi.cCurrentMove=0;
+				m_tBoard.g[nMove] = 'P';
+				m_tBoard.g[i] = ':'; // m_tBoard.b[i];
+
+		        	std::cout << "W: " << fp.x << ", " << fp.y << " => ";
+		        	std::cout << "W: (" << nMove << ") " << tPawn.p.x << ", " << tPawn.p.y << '\n';
+
 				OnDraw();
 				usleep(500000);
+				// if no black blocks left, break procudure
 				if ( !m_vPawnsBlack.size() )
 				    {
 				    m_iActivBlack = -1;
@@ -480,29 +487,39 @@ void CCanvas::OnDraw()
 				    }
 				else
 				    {
-				    int y=m_tBoard.d.x;
-				    std::uniform_int_distribution<int> distribution(0,m_vPawnsBlack.size());
-				    int t{0};
-				    auto tPawn = m_vPawnsBlack[m_iActivBlack];
-				    do
+				    std::vector<std::pair<SPawn,SMove>> zugs; 	// ALL possible black moves
+				    for ( auto const & a:m_vPawnsBlack )	// for all pawns
 					{
+					auto pm = PossibleMovesBlack( a );
+					for ( auto const & b:pm )		// all moves
+					    {
+					    zugs.emplace_back( std::pair{a,b} );
+					    }
+					}
+				    // only if we have some ...
+				    if ( zugs.size() )
+					{
+					int z;
+				        std::uniform_int_distribution<int> distribution(0,zugs.size());
 					do
 					    {
-					    m_iActivBlack = (int)distribution(mt);
-					    } while ( (m_iActivBlack < 0) || (m_iActivBlack >= (int)m_vPawnsBlack.size()) );
+					    z = (int)distribution(mt);
+					    } while ( (z < 0) || (z >= (int)zugs.size()) );
 
-					tPawn = m_vPawnsBlack[m_iActivBlack];
+					tPawn = zugs[z].first;
 					i = (int)tPawn.p.x + (int)m_tBoard.d.x * (int)tPawn.p.y;
-					nMove = MoveBlack(m_vPawnsBlack[m_iActivBlack], eDir);
-					} while ( i == nMove || ++t > 10000);
 
-				    if ( nMove != i )
-					{
-					std::cout << "B: " << tPawn.p.x << ", " << tPawn.p.y << " => ";
+					auto tMove{zugs[z].second};
+					nMove = (int)tMove.p.x + (int)m_tBoard.d.x * (int)tMove.p.y;
+
+					SPosition const fp{i%(m_tBoard.d.x), i/(m_tBoard.d.x)}; // from pos
+					tPawn.p = {nMove%(m_tBoard.d.x), nMove/(m_tBoard.d.x)}; // to   pos
+			        	m_tGameBlack.emplace_back(SStep{m_tBoard.g, fp, tPawn.p, .1});
+
 					m_tBoard.g[nMove] = 'A';
-					m_tBoard.g[i] = m_tBoard.b[i];
-					tPawn.p = {nMove%(y), nMove/(y)};
-					m_tGameRecord.emplace_back(SStep{{m_tBoard.g}, SMove{tPawn.p, .1, -1}});
+					m_tBoard.g[i] = ':'; // m_tBoard.b[i];
+
+					std::cout << "B: " << fp.x << ", " << fp.y << " => ";
 					std::cout << "B: (" << nMove << ") " << tPawn.p.x << ", " << tPawn.p.y << '\n';
 					}
 				    }

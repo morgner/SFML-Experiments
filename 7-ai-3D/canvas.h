@@ -103,7 +103,7 @@ struct SSize
     int x{0},y{0};
     };
 
-struct SMove
+struct SMove // remove
     {
     SPosition p;
     double    v{.0}; // value
@@ -123,7 +123,9 @@ struct SBoard
 struct SStep
     {
     std::string g;
-    SMove     	m;
+    SPosition  	f;
+    SPosition  	t;
+    double      v{.0}; // value
     };
 
 using VSSteps=std::vector<SStep>;
@@ -249,13 +251,24 @@ class CCanvas
         	}
             }
 
-        VSSteps m_tGameRecord;
+        VSSteps m_tGameWhite;
+        VSSteps m_tGameBlack;
 
         void DumpGame()
             {
-            for ( auto const & a:m_tGameRecord )
+            std::cout << "white" << '\n';
+            for ( auto const & a:m_tGameWhite )
         	{
-        	std::cout << "{ G: {" << a.g << "}, X: " << a.m.p.x << ", Y: " << a.m.p.y << ", V: " << a.m.v << "}" << '\n';
+        	std::cout << "{ G: {" << a.g << "}, X: " << a.f.x << ", Y: " << a.f.y
+        		                     <<  ", X: " << a.t.x << ", Y: " << a.t.y << ", V: " << a.v << "}" << '\n';
+
+        	}
+            std::cout << "black" << '\n';
+            for ( auto const & a:m_tGameBlack )
+        	{
+        	std::cout << "{ G: {" << a.g << "}, X: " << a.f.x << ", Y: " << a.f.y
+        		                     <<  ", X: " << a.t.x << ", Y: " << a.t.y << ", V: " << a.v << "}" << '\n';
+
         	}
             }
 
