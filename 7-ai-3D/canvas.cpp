@@ -128,65 +128,37 @@ void CCanvas::Event(sf::Event const & event)
     }
 
 
-void CCanvas::StartLevel(int const i)
+void CCanvas::StartLevel(int const & i)
     {
     m_tGameWhite.clear();
     m_tGameBlack.clear();
+    m_nChosenGame = i;
 
     m_tOffset = {25,50};
     switch (i)
         {
-	case 6: m_tBoard = {
-		{6,6},
+	case 6: m_tBoard = {{6,6},
 		{"PPPPPP........................AAAAAA"},
 		{"-X-X-XX-X-X--X-X-XX-X-X--X-X-XX-X-X-"}}; break;
 
 	case 5: m_tOffset = {37.5,62.5};
-		m_tBoard = {
-		{5,5},
+		m_tBoard = {{5,5},
 		{"PPPPP...............AAAAA"},
 		{"-X-X-X-X-X-X-X-X-X-X-X-X-"}}; break;
 
         case 4:	m_tOffset = {50,50};
-		m_tBoard = {
-		{4,4},
+		m_tBoard = {{4,4},
 		{"PPPP........AAAA"},
 		{"-X-XX-X--X-XX-X-"}}; break;
 
         case 9: m_tOffset = { 0, 25 };
-		m_tBoard = {{8,8},{
-	       "-.-.P.-."
-	       ".-.-.-.-"
-	       "-.-.-.-."
-	       ".-.-.-.-"
-	       "-.-.-.-."
-	       ".-.-.-.-"
-	       "-.-AAA-."
-	       "AA.-.-.-"},{
+		m_tBoard = {{8,8},
+		{"-.-.P.-..-.-.-.--.-.-.-..-.-.-.--.-.-.-..-.-.-.--.-AAA-.AA.-.-.-"},
+		{"-X-X-X-XX-X-X-X--X-X-X-XX-X-X-X--X-X-X-XX-X-X-X--X-X-X-XX-X-X-X-"}}; break;
 
-	       "-X-X-X-X"
-	       "X-X-X-X-"
-	       "-X-X-X-X"
-	       "X-X-X-X-"
-	       "-X-X-X-X"
-	       "X-X-X-X-"
-	       "-X-X-X-X"
-	       "X-X-X-X-"}}; break;
-
-        default:m_tBoard = {{6,6},{
-                "-X-XPX"
-                "X-X-X-"
-                "-X-X-X"
-                "X-XAX-"
-                "-X-X-X"
-                "X-X-X-"},{
-
-                "-X-X-X"
-                "X-X-X-"
-                "-X-X-X"
-                "X-X-X-"
-                "-X-X-X"
-                "X-X-X-"}};
+        default:m_tBoard = {{6,6},
+        	{"-X-XPXX-X-X--X-X-XX-XAX--X-X-XX-X-X-"},
+		{"-X-X-XX-X-X--X-X-XX-X-X--X-X-XX-X-X-"}}; break;
         }
     }
 
@@ -201,7 +173,7 @@ void CCanvas::Win()
     }
 
 
-int CCanvas::MoveWhite(SPawn const & p, CCanvas::EDirection const & e) const
+int CCanvas::MoveWhiteIA(SPawn const & p, CCanvas::EDirection const & e) const
     {
     int i{0}, i0{(int)p.p.x + (int)m_tBoard.d.x * (int)p.p.y};
     switch ( e )
@@ -230,11 +202,33 @@ int CCanvas::MoveWhite(SPawn const & p, CCanvas::EDirection const & e) const
 
 std::random_device rd;
 std::mt19937 mt(rd());
-int CCanvas::MoveBlack(SPawn const & p, CCanvas::EDirection const & e) const
+int CCanvas::MoveBlack(SPawn const & p) const
     {
     int i{0},i0{(int)p.p.x + (int)m_tBoard.d.x * (int)p.p.y};
 
     VSMoves pm = PossibleMovesBlack(p);
+
+    for (auto const & a:pm)
+	std::cout << " + " << a.p.x << ", " << a.p.y;
+    std::cout << '\n';
+
+    if ( ! pm.size() ) return i0;
+
+    std::uniform_int_distribution<int> distribution(0,pm.size());
+    do
+	{
+	i = (int)distribution(mt);
+	} while ( (i < 0) || (i >= (int)pm.size()) );
+
+
+    return pm[i].p.x + pm[i].p.y * m_tBoard.d.x;
+    }
+
+int CCanvas::MoveWhite(SPawn const & p) const
+    {
+    int i{0},i0{(int)p.p.x + (int)m_tBoard.d.x * (int)p.p.y};
+
+    VSMoves pm = PossibleMovesWhite(p);
 
     for (auto const & a:pm)
 	std::cout << " + " << a.p.x << ", " << a.p.y;
@@ -487,7 +481,7 @@ void CCanvas::OnDraw()
 				case 'l': eDir = CCanvas::EDirection::right;    break;
 				}
 			    m_tPengi.cCurrentMove=0;
-			    int nMove{MoveWhite(tPawn, eDir)};
+			    int nMove{MoveWhiteIA(tPawn, eDir)};
 			    if ( nMove != i )
 				{
 				SPosition const fp{i%(m_tBoard.d.x), i/(m_tBoard.d.x)}; // from pos
@@ -512,17 +506,6 @@ void CCanvas::OnDraw()
 				    }
 				else
 				    {
-/*
-				    std::vector<std::pair<SPawn,SMove>> zugs; 	// ALL possible black moves
-				    for ( auto const & a:m_vPawnsBlack )	// for all pawns
-					{
-					auto pm = PossibleMovesBlack( a );
-					for ( auto const & b:pm )		// all moves
-					    {
-					    zugs.emplace_back( std::pair{a,b} );
-					    }
-					}
-*/
                                     VDrags zugs{ DragBlack(m_vPawnsBlack) };
 
 				    // only if we have some ...
@@ -556,25 +539,25 @@ void CCanvas::OnDraw()
                                         VDrags zb{ DragBlack(m_vPawnsBlack) };
                                         VDrags zw{ DragWhite(m_vPawnsWhite) };
                                         if ( m_vPawnsWhite.size() >= m_vPawnsBlack.size() )
-		    std::cout << "+++ White wins\n";
-                else
-		    std::cout << "--- Black wins\n";
-                DumpGame();
-                                             
+					    std::cout << "+++ White wins\n";
+					else
+					    std::cout << "--- Black wins\n";
+					DumpGame();
+					StartLevel(m_nChosenGame);
                                         }
 				    }
 				}
-                                    else
-                                        {
-                                        VDrags zb{ DragBlack(m_vPawnsBlack) };
-                                        VDrags zw{ DragWhite(m_vPawnsWhite) };
-                                        if ( m_vPawnsWhite.size() >= m_vPawnsBlack.size() )
-		    std::cout << "+++ White wins\n";
-                else
-		    std::cout << "--- Black wins\n";
-                DumpGame();
-                                             
-                                        }
+			    else
+				{
+				VDrags zb{ DragBlack(m_vPawnsBlack) };
+				VDrags zw{ DragWhite(m_vPawnsWhite) };
+				if ( m_vPawnsWhite.size() >= m_vPawnsBlack.size() )
+				    std::cout << "+++ White wins\n";
+				else
+				    std::cout << "--- Black wins\n";
+				DumpGame();
+				StartLevel(m_nChosenGame);
+				}
 			    }
 			}
 		    }

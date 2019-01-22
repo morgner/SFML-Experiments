@@ -275,9 +275,12 @@ class CCanvas
             }
 
         SBoard m_tBoard;
+        int m_nChosenGame{0};
 
-        int MoveWhite(SPawn const & p, EDirection const & e) const;
-        int MoveBlack(SPawn const & p, EDirection const & e) const;
+        int MoveWhiteIA(SPawn const & p, EDirection const & e) const;
+
+        int MoveBlack(SPawn const & p) const;
+        int MoveWhite(SPawn const & p) const;
         VSMoves PossibleMovesWhite(SPawn const & crtPawn) const;
         VSMoves PossibleMovesBlack(SPawn const & crtPawn) const;
         VDrags DragBlack( VSPawns const & pawns );
@@ -337,7 +340,7 @@ class CCanvas
                 }
             }
 
-        void StartLevel(int const i);
+        void StartLevel(int const & i);
 
         void Win();
 
