@@ -309,9 +309,34 @@ VSMoves CCanvas::PossibleMovesBlack(SPawn const & p) const
     return std::move(tMoves);
     }
 
-bool CCanvas::Drag(SPawn const & crtPawn)
+using VDrags = std::vector<std::pair<SPawn,SMove>>;
+
+VDrags CCanvas::DragBlack( VSPawns const & pawns )
     {
-    return true;
+    VDrags zugs; 	// ALL possible black moves
+    for ( auto const & a:m_vPawnsBlack )	// for all pawns
+	{
+	auto pm = PossibleMovesBlack( a );
+	for ( auto const & b:pm )		// all moves
+	    {
+	    zugs.emplace_back( std::pair{a,b} ); // pawn,newPos
+	    }
+	}
+    return std::move(zugs);
+    }
+
+VDrags CCanvas::DragWhite( VSPawns const & pawns )
+    {
+    VDrags zugs; 	// ALL possible White moves
+    for ( auto const & a:m_vPawnsWhite )	// for all pawns
+	{
+	auto pm = PossibleMovesWhite( a );
+	for ( auto const & b:pm )		// all moves
+	    {
+	    zugs.emplace_back( std::pair{a,b} ); // pawn,newPos
+	    }
+	}
+    return std::move(zugs);
     }
 
 void CCanvas::DrawBoard(SBoard const & crtBoard)
@@ -487,6 +512,7 @@ void CCanvas::OnDraw()
 				    }
 				else
 				    {
+/*
 				    std::vector<std::pair<SPawn,SMove>> zugs; 	// ALL possible black moves
 				    for ( auto const & a:m_vPawnsBlack )	// for all pawns
 					{
@@ -496,6 +522,9 @@ void CCanvas::OnDraw()
 					    zugs.emplace_back( std::pair{a,b} );
 					    }
 					}
+*/
+                                    VDrags zugs{ DragBlack(m_vPawnsBlack) };
+
 				    // only if we have some ...
 				    if ( zugs.size() )
 					{
@@ -522,8 +551,30 @@ void CCanvas::OnDraw()
 					std::cout << "B: " << fp.x << ", " << fp.y << " => ";
 					std::cout << "B: (" << nMove << ") " << tPawn.p.x << ", " << tPawn.p.y << '\n';
 					}
+                                    else
+                                        {
+                                        VDrags zb{ DragBlack(m_vPawnsBlack) };
+                                        VDrags zw{ DragWhite(m_vPawnsWhite) };
+                                        if ( m_vPawnsWhite.size() >= m_vPawnsBlack.size() )
+		    std::cout << "+++ White wins\n";
+                else
+		    std::cout << "--- Black wins\n";
+                DumpGame();
+                                             
+                                        }
 				    }
 				}
+                                    else
+                                        {
+                                        VDrags zb{ DragBlack(m_vPawnsBlack) };
+                                        VDrags zw{ DragWhite(m_vPawnsWhite) };
+                                        if ( m_vPawnsWhite.size() >= m_vPawnsBlack.size() )
+		    std::cout << "+++ White wins\n";
+                else
+		    std::cout << "--- Black wins\n";
+                DumpGame();
+                                             
+                                        }
 			    }
 			}
 		    }

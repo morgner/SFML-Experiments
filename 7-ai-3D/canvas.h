@@ -141,6 +141,8 @@ struct SPawn
 
 using VSPawns=std::vector<SPawn>;
 
+using VDrags = std::vector<std::pair<SPawn,SMove>>;
+
 
 class CCanvas
     {
@@ -278,7 +280,9 @@ class CCanvas
         int MoveBlack(SPawn const & p, EDirection const & e) const;
         VSMoves PossibleMovesWhite(SPawn const & crtPawn) const;
         VSMoves PossibleMovesBlack(SPawn const & crtPawn) const;
-        bool Drag(SPawn const & crtPawn);
+        VDrags DragBlack( VSPawns const & pawns );
+        VDrags DragWhite( VSPawns const & pawns );
+//      bool Drag(SPawn const & crtPawn);
         void DrawBoard(SBoard const & crtBoard);
 
 
