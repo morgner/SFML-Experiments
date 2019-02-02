@@ -3,7 +3,9 @@
 
 #include <iostream>
 #include <vector>
+#include <set>
 #include <algorithm>    // std::swap
+#include <map>    // std::swap
 #include <cstdint>      // uint_32
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Time.hpp>
@@ -96,22 +98,20 @@ struct SMouse
 struct SPosition
     {
     int x{0},y{0};
+
+    bool operator == (SPosition const & lhs) const { return  ((lhs.x == x) && (lhs.y == y)); }
+    bool operator != (SPosition const & lhs) const { return !(lhs == *this); }
+    bool operator <  (SPosition const & lhs) const
+	{
+	if (lhs.x == x) return (lhs.y < y);
+	return lhs.x < x;
+	}
     };
 
 struct SSize
     {
     int x{0},y{0};
     };
-
-struct SMove // remove
-    {
-    SPosition p;
-    double    v{.0}; // value
-    int32_t   remove{-1};
-    SMove(SPosition const & p, double const & v, int32_t const & remove):p(p),v(v),remove(remove){};
-    };
-
-using VSMoves=std::vector<SMove>;
 
 struct SBoard
     {
@@ -125,11 +125,47 @@ struct SStep
     std::string g;
     SPosition  	f;
     SPosition  	t;
-    double      v{.0}; // value
     };
 
 using VSSteps=std::vector<SStep>;
 
+using MPos2Pos = std::map<SPosition,SPosition>;
+
+struct SBrainCell
+    {
+    SPosition  	f;
+    SPosition  	t;
+    long      v{0}; // value
+    long      u{0}; // usage counter
+
+    SBrainCell() = default;
+    SBrainCell(SPosition const & pf, SPosition const & pt, long const & weight)
+    : f(pf), t(pt), v(weight) {}
+
+    bool operator == (SBrainCell const & lhs) const { return lhs.f == f && lhs.t == t; }
+    bool operator <  (SBrainCell const & lhs) const
+	{
+	if ( lhs.u != 0 && u != 0 )
+		return (double)lhs.v / lhs.u < (double)v / u;
+	return (double)lhs.v / (lhs.u == 0)?1:lhs.u < (double)v / (u == 0)?1:u;
+	}
+    };
+
+using VSBrainCells = std::vector<SBrainCell>;
+using MBrain       = std::map<std::string, VSBrainCells>;
+
+struct SMove // remove
+    {
+    SPosition p;
+    double    v{.0}; // value
+    int32_t   remove{-1};
+    SMove(SPosition const & p, double const & v, int32_t const & remove):p(p),v(v),remove(remove){};
+    SMove operator = (SBrainCell const & m) { p = m.t; return *this; }
+    bool operator == (SBrainCell const & bc) { return p == bc.t; }
+    };
+inline bool operator == (SBrainCell const & bc, SMove const & m) { return m.p == bc.t; }
+
+using VSMoves=std::vector<SMove>;
 
 struct SPawn
     {
@@ -155,7 +191,7 @@ class CCanvas
 	      m_fTicker(&CCanvas::fTicker, this),
               m_fFigur(&CCanvas::fFigur, this)
             {
-            StartLevel(0);
+            StartLevel(5);
             m_fTicker.launch();
             m_fFigur.launch();
             m_bHasFont = m_fFont.loadFromFile("FiraSans-Regular.otf");
@@ -203,7 +239,6 @@ class CCanvas
         void Event(sf::Event const & event);
 
     public:
-        bool   m_bShowField{false};
         bool   m_bGameOver{false};
         bool   m_bGameWon{false};
         int    m_nMines{20};
@@ -221,28 +256,113 @@ class CCanvas
         GLuint const m_nFigurGreen { glGenLists(8) };
 
 
-        int      m_iActivWhite{0};
-        int      m_iActivBlack{0};
-        VSPawns  m_vPawnsWhite{};
-        VSPawns  m_vPawnsBlack{};
+        int const m_nKiSleepStep{10000};
+        int	  m_nKiSleep{00000};
+        int       m_iActivWhite{-1};
+        int       m_iActivBlack{-1};
+        VSPawns   m_vPawnsWhite{};
+        VSPawns   m_vPawnsBlack{};
 
-        float  m_fRotateX{0};
-        float  m_fRotateY{0};
-        float  m_fRotateZ{0};
+        enum class EDirection {none,upleft,up,upup,upright,left,down,right,};
+        bool	  m_bByHand{false};
+        bool 	  PlayWhite(bool const & bPhase);
 
-        char   m_cKeyDown{0};
+        void      KiLearnWhite();
+        void      KiLearnBlack();
 
-        enum class EDirection
+        float     m_fRotateX{0};
+        float     m_fRotateY{0};
+        float     m_fRotateZ{0};
+
+        char      m_cKeyDown{0};
+
+
+        MBrain m_mBrainWhite;
+        MBrain m_mBrainBlack;
+
+        void DumpBrainWhite() const { std::cout << "White Brain\n"; DumpBrain(m_mBrainWhite); }
+        void DumpBrainBlack() const { std::cout << "Black Brain\n"; DumpBrain(m_mBrainBlack); }
+
+        void DumpBrain( MBrain const & brain ) const
             {
-            none,
-            upleft,
-            up,
-            upup,
-            upright,
-            left,
-            down,
-            right,
-            };
+            for ( auto const & a:brain )
+                for ( auto const & b:a.second )
+		    {
+		    std::cout << "{" << a.first << "}"
+			      << ": x " << b.f.x << ", y " << b.f.y
+			      << ", X " << b.t.x << ", Y " << b.t.y
+			      << ", V " << b.v   << ", u " << b.u << '\n';
+		    }
+            } // void DumpBrain( MBrain const & brain ) const
+
+
+        bool m_bKiTest{false};
+        bool m_bPhase{true};
+
+	size_t m_nWinsWhite{0};
+	size_t m_nWinsBlack{0};
+
+        VDrags KiAddTrainingWhite(VDrags const & pm) { return KiAddTraining(pm, m_mBrainWhite); }
+	VDrags KiAddTrainingBlack(VDrags const & pm) { return KiAddTraining(pm, m_mBrainBlack); }
+
+        VDrags KiAddTraining(VDrags const & pm, MBrain const & brain)
+            {
+            auto const pbf =  brain.find(m_tBoard.g);
+            if ( pbf == brain.end() )
+        	{
+                return pm;
+        	}
+            auto & vbc = pbf->second;
+            SBrainCell bc{vbc[0].f, vbc[0].t, 0};
+            SPawn      pw{bc.f.x, bc.f.y};
+
+            std::multiset<SBrainCell> setbc{{bc}};
+            for (auto const & a:pm)
+        	{
+        	auto const pbc = find(vbc.begin(), vbc.end(), a.second);
+        	if (pbc == vbc.end())
+        	    {
+		    setbc.emplace(SBrainCell{a.first.p,a.second.p,0});
+        	    }
+        	else
+		    {
+		    for (auto const & b:vbc)
+			{
+			bc = b;
+			setbc.emplace(bc);
+			}
+		    }
+        	}
+            VDrags vd;
+            for ( auto const & a:setbc )
+        	{
+        	vd.emplace_back(std::pair{SPawn{a.f.x, a.f.y}, SMove{a.t, 0, 0}});
+        	if (vd.size() > 4) break;
+        	}
+            return vd;
+            }
+
+
+        bool KiAddExpirienceWhite(VSSteps const & game, double const & weight) { return KiAddExpirience(game, weight, m_mBrainWhite); }
+        bool KiAddExpirienceBlack(VSSteps const & game, double const & weight) { return KiAddExpirience(game, weight, m_mBrainBlack); }
+
+        bool KiAddExpirience(VSSteps const & game, double const & weight, MBrain & brain)
+            {
+           for (auto const & a:game)
+        	{
+        	if ( brain.find(a.g) == brain.end() ) brain[a.g].emplace_back(SBrainCell{a.f, a.t, 0});
+        	auto & vbc = brain.find(a.g)->second;
+        	auto pbc = find(vbc.begin(), vbc.end(), SBrainCell{a.f, a.t, 0});
+        	if (pbc == vbc.end())
+        	    {
+        	    vbc.emplace_back(SBrainCell{a.f, a.t, 0});
+        	    pbc = find(vbc.begin(), vbc.end(), SBrainCell{a.f, a.t, 0});
+        	    }
+        	pbc->v += weight;
+        	pbc->u++;
+        	}
+            return true;
+            }
 
         void DumpBoard(size_t const & width, std::string const & sBoard) const
             {
@@ -262,31 +382,30 @@ class CCanvas
             for ( auto const & a:m_tGameWhite )
         	{
         	std::cout << "{ G: {" << a.g << "}, X: " << a.f.x << ", Y: " << a.f.y
-        		                     <<  ", X: " << a.t.x << ", Y: " << a.t.y << ", V: " << a.v << "}" << '\n';
-
+        		                     <<  ", X: " << a.t.x << ", Y: " << a.t.y << "}" << '\n';
         	}
             std::cout << "black" << '\n';
             for ( auto const & a:m_tGameBlack )
         	{
         	std::cout << "{ G: {" << a.g << "}, X: " << a.f.x << ", Y: " << a.f.y
-        		                     <<  ", X: " << a.t.x << ", Y: " << a.t.y << ", V: " << a.v << "}" << '\n';
-
+        		                     <<  ", X: " << a.t.x << ", Y: " << a.t.y << "}" << '\n';
         	}
             }
 
         SBoard m_tBoard;
-        int m_nChosenGame{0};
+        int m_nChosenGame{5};
 
         int MoveWhiteIA(SPawn const & p, EDirection const & e) const;
 
-        int MoveBlack(SPawn const & p) const;
+        int MoveBlack(SPawn const & p);
         int MoveWhite(SPawn const & p) const;
         VSMoves PossibleMovesWhite(SPawn const & crtPawn) const;
         VSMoves PossibleMovesBlack(SPawn const & crtPawn) const;
         VDrags DragBlack( VSPawns const & pawns );
         VDrags DragWhite( VSPawns const & pawns );
-//      bool Drag(SPawn const & crtPawn);
-        void DrawBoard(SBoard const & crtBoard);
+
+        void RecognizeBoard();
+
 
 
         struct SPengi

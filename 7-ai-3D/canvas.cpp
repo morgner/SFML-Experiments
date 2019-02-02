@@ -64,9 +64,12 @@ void CCanvas::Event(sf::Event const & event)
             switch (m_cKeyDown)
                 {
                 case 'a': m_iActivBlack = (m_iActivBlack == 0) ? m_vPawnsBlack.size()-1 : m_iActivBlack-1; break;
-                case 's': m_bShowField = !m_bShowField; break;
+                case 's': m_nKiSleep += m_nKiSleepStep; break;
                 case 'd': break;
-                case 'f': break;
+                case 'e': DumpBrainWhite(); break;
+                case 'f': m_bKiTest=true; break;
+                case 'g':
+                case 'h': m_bByHand = !m_bByHand; break;
                 case 'u': 
                 case 'i': if ( m_cKeyDown == 'i' ) m_cKeyDown='I';
                 case 'j':
@@ -107,9 +110,12 @@ void CCanvas::Event(sf::Event const & event)
 	    switch (m_cKeyDown)
                 {
                 case 'a': ++m_iActivBlack; if (m_iActivBlack >= (int)m_vPawnsBlack.size()) m_iActivBlack = 0; break;
-                case 's': m_bShowField = !m_bShowField; break;
+                case 's': if (m_nKiSleep > m_nKiSleepStep) m_nKiSleep -= m_nKiSleepStep; break;
                 case 'd': DumpGame(); break;
-                case 'f': break;
+                case 'e': DumpBrainBlack(); break;
+                case 'f': m_bKiTest=false; break;
+                case 'g':
+                case 'h': m_bByHand = !m_bByHand; break;
                 case 'u': 
                 case 'i': 
                 case 'j': 
@@ -130,13 +136,26 @@ void CCanvas::Event(sf::Event const & event)
 
 void CCanvas::StartLevel(int const & i)
     {
+//    std::cout << "--------------------\n";
     m_tGameWhite.clear();
     m_tGameBlack.clear();
+    if ( m_nChosenGame != i )
+	{
+	m_nWinsWhite=0;
+	m_nWinsBlack=0;
+	m_mBrainWhite.clear();
+	m_mBrainBlack.clear();
+	}
     m_nChosenGame = i;
+    m_bPhase = true;
 
     m_tOffset = {25,50};
     switch (i)
         {
+	case 7: m_tBoard = {{7,7},
+		{"PPPPPPPPPPPPPP.....................AAAAAAAAAAAAAA"},
+		{"-X-X-X-X-X-X-X-X-X-X-X-X-X-X-X-X-X-X-X-X-X-X-X-X-"}}; break;
+
 	case 6: m_tBoard = {{6,6},
 		{"PPPPPP........................AAAAAA"},
 		{"-X-X-XX-X-X--X-X-XX-X-X--X-X-XX-X-X-"}}; break;
@@ -151,6 +170,11 @@ void CCanvas::StartLevel(int const & i)
 		{"PPPP........AAAA"},
 		{"-X-XX-X--X-XX-X-"}}; break;
 
+        case 3:	m_tOffset = {50,50};
+		m_tBoard = {{3,3},
+		{"PPP...AAA"},
+		{"-X-X-X-X-"}}; break;
+
         case 9: m_tOffset = { 0, 25 };
 		m_tBoard = {{8,8},
 		{"-.-.P.-..-.-.-.--.-.-.-..-.-.-.--.-.-.-..-.-.-.--.-AAA-.AA.-.-.-"},
@@ -161,17 +185,6 @@ void CCanvas::StartLevel(int const & i)
 		{"-X-X-XX-X-X--X-X-XX-X-X--X-X-XX-X-X-"}}; break;
         }
     }
-
-void CCanvas::Win()
-    {
-    int ic{0};
-    for ( auto const & a:m_tBoard.b )
-        {
-	m_tBoard.g[ic] = (/* m_tBoard.b[ic] */ a == 'X') ? 'A' : m_tBoard.b[ic];
-        ++ic;
-        }
-    }
-
 
 int CCanvas::MoveWhiteIA(SPawn const & p, CCanvas::EDirection const & e) const
     {
@@ -200,9 +213,20 @@ int CCanvas::MoveWhiteIA(SPawn const & p, CCanvas::EDirection const & e) const
     return i0;
     }
 
+void CCanvas::Win()
+    {
+    int ic{0};
+    for ( auto const & a:m_tBoard.b )
+        {
+	m_tBoard.g[ic] = (/* m_tBoard.b[ic] */ a == 'X') ? 'A' : m_tBoard.b[ic];
+        ++ic;
+        }
+    }
+
+
 std::random_device rd;
 std::mt19937 mt(rd());
-int CCanvas::MoveBlack(SPawn const & p) const
+int CCanvas::MoveBlack(SPawn const & p)
     {
     int i{0},i0{(int)p.p.x + (int)m_tBoard.d.x * (int)p.p.y};
 
@@ -259,7 +283,7 @@ VSMoves CCanvas::PossibleMovesWhite(SPawn const & p) const
         tMoves.emplace_back( SPosition{id%y, id/y}, 0.0, -1 );
 
         id = i + 2*y;
-        if ( ( id < l ) && ( i < y ) && ( m_tBoard.g[id] != 'A' ) )
+        if ( ( id < l ) && ( i < y ) && ( m_tBoard.g[id] != 'A' ) && ( m_tBoard.g[id] != 'P' ) )
             { tMoves.emplace_back( SPosition{id%y, id/y}, 0.0, -1 ); }
         }
 
@@ -288,7 +312,7 @@ VSMoves CCanvas::PossibleMovesBlack(SPawn const & p) const
         tMoves.emplace_back( SPosition{id%y, id/y}, 0.0, -1 );
 
         id = i - 2*y;
-        if ( ( id >= 0 ) && ( i >= l - y ) && ( m_tBoard.g[id] != 'P' ) )
+        if ( ( id >= 0 ) && ( i >= l - y ) && ( m_tBoard.g[id] != 'A' )  && ( m_tBoard.g[id] != 'P' ) )
             { tMoves.emplace_back( SPosition{id%y, id/y}, 0.0, -1 ); }
         }
 
@@ -333,11 +357,245 @@ VDrags CCanvas::DragWhite( VSPawns const & pawns )
     return std::move(zugs);
     }
 
-void CCanvas::DrawBoard(SBoard const & crtBoard)
+void CCanvas::RecognizeBoard()
     {
+    m_vPawnsWhite.clear();
+    m_vPawnsBlack.clear();
+
+    for ( int i{0},y{0}; y < m_tBoard.d.y; ++y )
+        {
+        for ( int x{0}; x < m_tBoard.d.x; ++x )
+            {
+            glPushMatrix();
+            glTranslatef( m_tOffset.x+(m_tField.x+5)*x, m_tOffset.y+(m_tField.y+5)*y, -00.f);
+            if ( m_tBoard.b[i] == 'X' ) glCallList(m_nFieldWhite); else glCallList(m_nFieldBlack);
+            if ( m_tBoard.g[i] == 'P' )
+        	{
+        	if ( (int)m_vPawnsWhite.size() == m_iActivWhite ) glCallList(m_nFigurGreen); else glCallList(m_nFigurWhite);
+        	m_vPawnsWhite.emplace_back(x,y);
+        	}
+            if ( m_tBoard.g[i] == 'A' )
+        	{
+        	if ( (int)m_vPawnsBlack.size() == m_iActivBlack ) glCallList(m_nFigurRed); else glCallList(m_nFigurBlack);
+        	m_vPawnsBlack.emplace_back(x,y);
+        	}
+            glPopMatrix();
+            ++i;
+            }
+        }
     }
 
+bool CCanvas::PlayWhite(bool const & bPhase)
+    {
+    RecognizeBoard();
+    if ( m_iActivWhite < 0 ) m_iActivWhite=0;
 
+    VDrags zugs{ DragWhite(m_vPawnsWhite) };
+    if ( !zugs.size() )
+	{
+	RecognizeBoard();
+	VDrags zb{ DragBlack(m_vPawnsBlack) };
+	VDrags zw{ DragWhite(m_vPawnsWhite) };
+	if ( m_vPawnsWhite.size() > m_vPawnsBlack.size() )
+	    {
+	    m_nWinsWhite++;
+	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  +++ White wins\n";
+	    KiAddExpirienceBlack(m_tGameBlack, -1);
+	    KiAddExpirienceWhite(m_tGameWhite,  1);
+	    }
+	if ( m_vPawnsWhite.size() == m_vPawnsBlack.size() )
+	    {
+	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
+	    KiAddExpirienceBlack(m_tGameBlack, 0);
+	    KiAddExpirienceWhite(m_tGameWhite, 0);
+	    }
+	if ( m_vPawnsWhite.size() < m_vPawnsBlack.size() )
+	    {
+	    m_nWinsBlack++;
+	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  --- Black wins\n";
+	    KiAddExpirienceBlack(m_tGameBlack,  1);
+	    KiAddExpirienceWhite(m_tGameWhite, -1);
+	    }
+	StartLevel(m_nChosenGame);
+	RecognizeBoard();
+	m_iActivWhite=0;
+	}
+
+
+    if ( (m_vPawnsWhite.size() <= (size_t)m_iActivWhite) ) m_iActivWhite = m_vPawnsWhite.size()-1;
+    auto & tPawn = m_vPawnsWhite[m_iActivWhite];
+
+    EDirection eDir;
+    switch ( m_tPengi.cCurrentMove )
+	{
+	case 'u': eDir = CCanvas::EDirection::upleft;   break;
+	case 'i': eDir = CCanvas::EDirection::up;       break;
+	case 'I': eDir = CCanvas::EDirection::upup;     break;
+	case 'o': eDir = CCanvas::EDirection::upright;  break;
+	case 'j': eDir = CCanvas::EDirection::left;     break;
+	case 'k': eDir = CCanvas::EDirection::down;     break;
+	case 'l': eDir = CCanvas::EDirection::right;    break;
+	}
+    m_tPengi.cCurrentMove=0;
+    auto i = (int)tPawn.p.x + (int)m_tBoard.d.x * (int)tPawn.p.y;
+    int nMove{MoveWhiteIA(tPawn, eDir)};
+    if ( nMove != i )
+	{
+	SPosition const fp{i%(m_tBoard.d.x), i/(m_tBoard.d.x)}; // from pos
+	tPawn.p = {nMove%(m_tBoard.d.x), nMove/(m_tBoard.d.x)}; // to   pos
+	m_tGameWhite.emplace_back(SStep{m_tBoard.g, fp, tPawn.p});
+
+	m_tBoard.g[nMove] = 'P';
+	m_tBoard.g[i] = ':';
+
+	std::cout << "W: (" << i     << ") " << fp.x << ", " << fp.y << " => ";
+	std::cout << "W: (" << nMove << ") " << tPawn.p.x << ", " << tPawn.p.y << '\n';
+	return !bPhase; // moved, next cycle is black's
+	}
+    return bPhase; // not yet moved, next cycle is ours
+    } //
+
+
+void CCanvas::KiLearnWhite()
+    {
+    RecognizeBoard();
+    m_iActivWhite = -1;
+
+    VDrags zugs{ DragWhite(m_vPawnsWhite) };
+
+    if ( m_bKiTest ) zugs = KiAddTrainingWhite(zugs);
+
+    // only if we have some ...
+    if ( zugs.size() && m_vPawnsWhite.size() )
+	{
+	int z{0};
+	if ( zugs.size() > 1 )
+	    {
+	    std::uniform_int_distribution<int> distribution(0,zugs.size()-1);
+	    do
+		{
+		z = (int)distribution(mt);
+		} while ( (z < 0) || (z >= (int)zugs.size()) );
+	    }
+	SPawn tPawn = zugs[z].first;
+	auto i = (int)tPawn.p.x + (int)m_tBoard.d.x * (int)tPawn.p.y;
+
+	auto tMove{zugs[z].second};
+	auto nMove = (int)tMove.p.x + (int)m_tBoard.d.x * (int)tMove.p.y;
+
+	SPosition const fp{i%(m_tBoard.d.x), i/(m_tBoard.d.x)}; // from pos
+	tPawn.p = {nMove%(m_tBoard.d.x), nMove/(m_tBoard.d.x)}; // to   pos
+	m_tGameWhite.emplace_back(SStep{m_tBoard.g, fp, tPawn.p});
+
+	m_tBoard.g[nMove] = 'P';
+	m_tBoard.g[i] = ':';
+
+	if (m_nKiSleep > 100000-1)
+	    {
+	    std::cout << "W: (" << i     << ") " << fp.x << ", " << fp.y << " => ";
+	    std::cout << "W: (" << nMove << ") " << tPawn.p.x << ", " << tPawn.p.y << '\n';
+	    }
+	}
+    else
+	{
+	RecognizeBoard();
+	VDrags zb{ DragBlack(m_vPawnsBlack) };
+	VDrags zw{ DragWhite(m_vPawnsWhite) };
+	if ( m_vPawnsWhite.size() > m_vPawnsBlack.size() )
+	    {
+	    m_nWinsWhite++;
+	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  +++ White wins\n";
+	    KiAddExpirienceBlack(m_tGameBlack, -1);
+	    KiAddExpirienceWhite(m_tGameWhite,  1);
+	    }
+	if ( m_vPawnsWhite.size() == m_vPawnsBlack.size() )
+	    {
+	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
+	    KiAddExpirienceBlack(m_tGameBlack, 0);
+	    KiAddExpirienceWhite(m_tGameWhite, 0);
+	    }
+	if ( m_vPawnsWhite.size() < m_vPawnsBlack.size() )
+	    {
+	    m_nWinsBlack++;
+	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  --- Black wins\n";
+	    KiAddExpirienceBlack(m_tGameBlack,  1);
+	    KiAddExpirienceWhite(m_tGameWhite, -1);
+	    }
+	StartLevel(m_nChosenGame);
+	}
+    } //
+
+void CCanvas::KiLearnBlack()
+    {
+    RecognizeBoard();
+    m_iActivBlack = -1;
+
+    VDrags zugs{ DragBlack(m_vPawnsBlack) };
+
+    if ( m_bKiTest )
+	{
+	zugs = KiAddTrainingBlack(zugs);
+	}
+
+    // only if we have some ...
+    if ( zugs.size() && m_vPawnsBlack.size() )
+	{
+	int z{0};
+	if ( zugs.size() > 1 )
+	    {
+	    std::uniform_int_distribution<int> distribution(0,zugs.size() -1 );
+	    do
+		{
+		z = (int)distribution(mt);
+		} while ( (z < 0) || (z >= (int)zugs.size()) );
+	    }
+	SPawn tPawn = zugs[z].first;
+	auto i = (int)tPawn.p.x + (int)m_tBoard.d.x * (int)tPawn.p.y;
+
+	auto tMove{zugs[z].second};
+	auto nMove = (int)tMove.p.x + (int)m_tBoard.d.x * (int)tMove.p.y;
+
+	SPosition const fp{i%(m_tBoard.d.x), i/(m_tBoard.d.x)}; // from pos
+	tPawn.p = {nMove%(m_tBoard.d.x), nMove/(m_tBoard.d.x)}; // to   pos
+	m_tGameBlack.emplace_back(SStep{m_tBoard.g, fp, tPawn.p});
+
+	m_tBoard.g[nMove] = 'A';
+	m_tBoard.g[i] = ':';
+
+	if (m_nKiSleep > 100000-1)
+	    {
+	    std::cout << "B: (" << i     << ") " << fp.x << ", " << fp.y << " => ";
+	    std::cout << "B: (" << nMove << ") " << tPawn.p.x << ", " << tPawn.p.y << '\n';
+	    }
+	}
+    else
+	{
+	RecognizeBoard();
+	VDrags zb{ DragBlack(m_vPawnsBlack) };
+	VDrags zw{ DragWhite(m_vPawnsWhite) };
+	if ( m_vPawnsWhite.size() > m_vPawnsBlack.size() )
+	    {
+	    m_nWinsWhite++;
+	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  +++ White wins\n";
+	    KiAddExpirienceBlack(m_tGameBlack, -1);
+	    KiAddExpirienceWhite(m_tGameWhite,  1);
+	    }
+	if ( m_vPawnsWhite.size() == m_vPawnsBlack.size() )
+	    {
+	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
+	    KiAddExpirienceBlack(m_tGameBlack, 0);
+	    KiAddExpirienceWhite(m_tGameWhite, 0);
+	    }
+	if ( m_vPawnsWhite.size() < m_vPawnsBlack.size() )
+	    {
+	    m_nWinsBlack++;
+	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  --- Black wins\n";
+	    KiAddExpirienceBlack(m_tGameBlack,  1);
+	    KiAddExpirienceWhite(m_tGameWhite, -1);
+	    }
+	StartLevel(m_nChosenGame);
+	}
+    } //
 
 bool CCanvas::m_bHasFocus{true}; 
 
@@ -363,22 +621,22 @@ void CCanvas::OnDraw()
     if ( !init )
         {
         init = true;
-        //------------------------------------------------------ objects
-        CGlQuader g;
-
-        glNewList(m_nFieldBlack, GL_COMPILE); g(13.0f,13.0f, 2.9f, addd, addd, addd, addd, addd, addd ); glEndList(); // FieldBlack
-        glNewList(m_nFigurWhite, GL_COMPILE); g( 6.0f, 6.0f, 9.5f, a777, a111, a777, a777, a777, a777 ); glEndList(); // FigurWhite
-        glNewList(m_nFieldWhite, GL_COMPILE); g(13.0f,13.0f, 2.9f, ahhh, ahhh, ahhh, ahhh, ahhh, ahhh ); glEndList(); // FieldWhite
-        glNewList(m_nFigurBlack, GL_COMPILE); g( 6.5f, 6.5f, 9.5f, a333, a777, a333, a333, a333, a333 ); glEndList(); // FigurBlack
-        glNewList(m_nFrameRed,   GL_COMPILE); g(14.0f,14.0f, 2.8f, a155, a155, a155, a155, a155, a155 ); glEndList(); // FrameRed,
-        glNewList(m_nFrameGreen, GL_COMPILE); g(14.0f,14.0f, 0.5f, a010, a010, a010, a010, a010, a010 ); glEndList(); // FrameGreen
-        glNewList(m_nFigurRed,   GL_COMPILE); g( 6.0f, 6.0f, 9.5f, a155, a155, a155, a155, a155, a155 ); glEndList(); // FigurRed
-        glNewList(m_nFigurGreen, GL_COMPILE); g( 6.0f, 6.0f, 9.5f, a010, a010, a010, a010, a010, a010 ); glEndList(); // FigurGreen
-
         //------------------------------------------------------ light
         // Enable light
         glEnable(GL_LIGHTING);
         glEnable(GL_LIGHT0);
+        //------------------------------------------------------ objects
+        CGlQuader g;
+        CGlPawn   p;
+
+        glNewList(m_nFieldBlack, GL_COMPILE); g(13.0f,13.0f, 2.9f, addd, addd, addd, addd, addd, addd ); glEndList(); // FieldBlack
+        glNewList(m_nFigurWhite, GL_COMPILE); p( 6.0f, 6.0f, 9.5f, a777 ); glEndList(); // FigurWhite
+        glNewList(m_nFieldWhite, GL_COMPILE); g(13.0f,13.0f, 2.9f, ahhh, ahhh, ahhh, ahhh, ahhh, ahhh ); glEndList(); // FieldWhite
+        glNewList(m_nFigurBlack, GL_COMPILE); p( 6.5f, 6.5f, 9.5f, a333 ); glEndList(); // FigurBlack
+        glNewList(m_nFrameRed,   GL_COMPILE); g(11.0f,11.0f, 3.0f, a155, a155, a155, a155, a155, a155 ); glEndList(); // FrameRed,
+        glNewList(m_nFrameGreen, GL_COMPILE); g( 8.5f, 8.5f, 3.1f, a010, a010, a010, a010, a010, a010 ); glEndList(); // FrameGreen
+        glNewList(m_nFigurRed,   GL_COMPILE); p( 6.0f, 6.0f, 9.5f, a155 ); glEndList(); // FigurRed
+        glNewList(m_nFigurGreen, GL_COMPILE); p( 6.0f, 6.0f, 9.5f, a010 ); glEndList(); // FigurGreen
         }
 
     auto const s = m_oCtx.getSize();
@@ -410,168 +668,7 @@ void CCanvas::OnDraw()
     glRotatef(m_fRotateZ, 0.f, 0.f, 1.f);
     glRotatef(m_fRotateX, 1.f, 0.f, 0.f);
 
-/*
-    m_bGameWon = true;
-    int ic{0};
-    for ( auto const & a:m_tBoard.g )
-        {
-        if ( (m_tBoard.g[ic] == 'A') && (m_tBoard.b[ic] != 'X') )
-            {
-            m_bGameWon = false;
-            break;
-            }
-        ++ic;
-        }
-*/
-
-    m_vPawnsWhite.clear();
-    m_vPawnsBlack.clear();
-    
-//    SBoard tBoard{ {m_tBoard.d.x,m_tBoard.d.y}, m_tBoard.g, m_tBoard.b };
-
-    for ( int i{0},y{0}; y < m_tBoard.d.y; ++y )
-        {
-        for ( int x{0}; x < m_tBoard.d.x; ++x )
-            {
-            glPushMatrix();
-            glTranslatef( m_tOffset.x+(m_tField.x+5)*x, m_tOffset.y+(m_tField.y+5)*y, -00.f);
-            if ( m_tBoard.b[i] == 'X' ) glCallList(m_nFieldWhite); else glCallList(m_nFieldBlack);
-            if ( m_tBoard.g[i] == 'P' )
-        	{
-// std::cout << "iActivWhite " << iActivWhite << ", green " << ((int)vPawnsWhite.size() == iActivWhite) << '\n';
-        	if ( (int)m_vPawnsWhite.size() == m_iActivWhite ) glCallList(m_nFigurGreen); else glCallList(m_nFigurWhite);
-        	m_vPawnsWhite.emplace_back(x,y);
-        	}
-            if ( m_tBoard.g[i] == 'A' )
-        	{
-// std::cout << "iActivBlack " << iActivBlack << ", red " << (vPawnsBlack.size() == (size_t)iActivBlack) << '\n';
-        	if ( (int)m_vPawnsBlack.size() == m_iActivBlack ) glCallList(m_nFigurRed); else glCallList(m_nFigurBlack);
-        	m_vPawnsBlack.emplace_back(x,y);
-        	}
-            glPopMatrix();
-            ++i;
-            }
-        }
-
-    for ( int i{0},y{0}; y < m_tBoard.d.y; ++y )
-	{
-	for ( int x{0}; x < m_tBoard.d.x; ++x )
-	    {
-	    glPushMatrix();
-	    CCanvas::EDirection eDir{EDirection::none};
-
-	    switch ( m_tBoard.g[i] )
-		{
-		case 'P':
-		    {
-		    if ( (m_vPawnsWhite.size() <= (size_t)m_iActivWhite)||!(m_vPawnsWhite.size()) ) break;
-		    auto & tPawn = m_vPawnsWhite[m_iActivWhite];
-		    if ( x==tPawn.p.x && y==tPawn.p.y )
-			{
-			if ( m_tPengi.cCurrentMove )
-			    {
-			    switch ( m_tPengi.cCurrentMove )
-				{
-				case 'u': eDir = CCanvas::EDirection::upleft;   break;
-				case 'i': eDir = CCanvas::EDirection::up;       break;
-				case 'I': eDir = CCanvas::EDirection::upup;     break;
-				case 'o': eDir = CCanvas::EDirection::upright;  break;
-				case 'j': eDir = CCanvas::EDirection::left;     break;
-				case 'k': eDir = CCanvas::EDirection::down;     break;
-				case 'l': eDir = CCanvas::EDirection::right;    break;
-				}
-			    m_tPengi.cCurrentMove=0;
-			    int nMove{MoveWhiteIA(tPawn, eDir)};
-			    if ( nMove != i )
-				{
-				SPosition const fp{i%(m_tBoard.d.x), i/(m_tBoard.d.x)}; // from pos
-				tPawn.p = {nMove%(m_tBoard.d.x), nMove/(m_tBoard.d.x)}; // to   pos
-		        	m_tGameWhite.emplace_back(SStep{m_tBoard.g, fp, tPawn.p, .1});
-
-				m_tBoard.g[nMove] = 'P';
-				m_tBoard.g[i] = ':'; // m_tBoard.b[i];
-
-		        	std::cout << "W: " << fp.x << ", " << fp.y << " => ";
-		        	std::cout << "W: (" << nMove << ") " << tPawn.p.x << ", " << tPawn.p.y << '\n';
-
-				OnDraw();
-				usleep(500000);
-				// if no black blocks left, break procudure
-				if ( !m_vPawnsBlack.size() )
-				    {
-				    m_iActivBlack = -1;
-				    OnDraw();
-				    usleep(500000);
-				    break;
-				    }
-				else
-				    {
-                                    VDrags zugs{ DragBlack(m_vPawnsBlack) };
-
-				    // only if we have some ...
-				    if ( zugs.size() )
-					{
-					int z;
-				        std::uniform_int_distribution<int> distribution(0,zugs.size());
-					do
-					    {
-					    z = (int)distribution(mt);
-					    } while ( (z < 0) || (z >= (int)zugs.size()) );
-
-					tPawn = zugs[z].first;
-					i = (int)tPawn.p.x + (int)m_tBoard.d.x * (int)tPawn.p.y;
-
-					auto tMove{zugs[z].second};
-					nMove = (int)tMove.p.x + (int)m_tBoard.d.x * (int)tMove.p.y;
-
-					SPosition const fp{i%(m_tBoard.d.x), i/(m_tBoard.d.x)}; // from pos
-					tPawn.p = {nMove%(m_tBoard.d.x), nMove/(m_tBoard.d.x)}; // to   pos
-			        	m_tGameBlack.emplace_back(SStep{m_tBoard.g, fp, tPawn.p, .1});
-
-					m_tBoard.g[nMove] = 'A';
-					m_tBoard.g[i] = ':'; // m_tBoard.b[i];
-
-					std::cout << "B: " << fp.x << ", " << fp.y << " => ";
-					std::cout << "B: (" << nMove << ") " << tPawn.p.x << ", " << tPawn.p.y << '\n';
-					}
-                                    else
-                                        {
-                                        VDrags zb{ DragBlack(m_vPawnsBlack) };
-                                        VDrags zw{ DragWhite(m_vPawnsWhite) };
-                                        if ( m_vPawnsWhite.size() >= m_vPawnsBlack.size() )
-					    std::cout << "+++ White wins\n";
-					else
-					    std::cout << "--- Black wins\n";
-					DumpGame();
-					StartLevel(m_nChosenGame);
-                                        }
-				    }
-				}
-			    else
-				{
-				VDrags zb{ DragBlack(m_vPawnsBlack) };
-				VDrags zw{ DragWhite(m_vPawnsWhite) };
-				if ( m_vPawnsWhite.size() >= m_vPawnsBlack.size() )
-				    std::cout << "+++ White wins\n";
-				else
-				    std::cout << "--- Black wins\n";
-				DumpGame();
-				StartLevel(m_nChosenGame);
-				}
-			    }
-			}
-		    }
-		    break;
-	    default : break;
-		}
-	    glPopMatrix();
-	    ++i;
-	    }
-	}
-    int i{0};
-    if ( m_iActivWhite >= 0 )
-	{
-	auto const tPawn = m_vPawnsWhite[m_iActivWhite];
+	for ( auto const & tPawn:m_vPawnsWhite )
 	    {
 	    VSMoves pm{PossibleMovesWhite(tPawn)};
 	    for ( auto const & a:pm )
@@ -582,14 +679,9 @@ void CCanvas::OnDraw()
 		glCallList(m_nFrameGreen);
 		glPopMatrix();
 		}
-	    ++i;
 	    }
-	}
 
-    i = 0;
-    if ( m_iActivBlack >= 0 )
-	{
-	auto const tPawn = m_vPawnsBlack[m_iActivBlack];
+	for ( auto const & tPawn:m_vPawnsBlack )
 	    {
 	    VSMoves pm{PossibleMovesBlack(tPawn)};
 	    for ( auto const & a:pm )
@@ -600,10 +692,58 @@ void CCanvas::OnDraw()
 		glCallList(m_nFrameRed);
 		glPopMatrix();
 		}
-	    ++i;
+	    }
+
+
+if (m_bPhase)
+    {
+    if ( m_bByHand )
+	m_bPhase = PlayWhite(m_bPhase);
+    else
+	{
+	KiLearnWhite();
+	m_bPhase = !m_bPhase;
+	}
+    usleep(m_nKiSleep);
+    }
+else
+    {
+    KiLearnBlack();
+    usleep(m_nKiSleep);
+    m_bPhase = !m_bPhase;
+    }
+
+
+
+    if ( m_iActivWhite >= 0 )
+	{
+	for ( auto const & tPawn:m_vPawnsWhite )
+	    {
+	    VSMoves pm{PossibleMovesWhite(tPawn)};
+	    for ( auto const & a:pm )
+		{
+		glPushMatrix();
+		glTranslatef( m_tOffset.x+(m_tField.x+5)*a.p.x, m_tOffset.y+(m_tField.y+5)*a.p.y, -00.f);
+		glCallList(m_nFrameGreen);
+		glPopMatrix();
+		}
 	    }
 	}
 
-    // end the current frame
+    if ( m_iActivBlack >= 0 )
+	{
+	auto const tPawn = m_vPawnsBlack[m_iActivBlack];
+	    {
+	    VSMoves pm{PossibleMovesBlack(tPawn)};
+	    for ( auto const & a:pm )
+		{
+		glPushMatrix();
+		glTranslatef( m_tOffset.x+(m_tField.x+5)*a.p.x, m_tOffset.y+(m_tField.y+5)*a.p.y, -00.f);
+		glCallList(m_nFrameRed);
+		glPopMatrix();
+		}
+	    }    // end the current frame
+	}
     m_oCtx.display();
+    usleep(m_nKiSleep);
     }
