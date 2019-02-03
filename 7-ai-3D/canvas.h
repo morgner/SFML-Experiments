@@ -147,7 +147,7 @@ struct SBrainCell
 	{
 	if ( lhs.u != 0 && u != 0 )
 		return (double)lhs.v / lhs.u < (double)v / u;
-	return (double)lhs.v / (lhs.u == 0)?1:lhs.u < (double)v / (u == 0)?1:u;
+	return (double)lhs.v / ((lhs.u == 0)?1:lhs.u) < (double)v / ((u == 0)?1:u);
 	}
     };
 
@@ -302,6 +302,8 @@ class CCanvas
 	size_t m_nWinsWhite{0};
 	size_t m_nWinsBlack{0};
 
+        size_t m_nInsharpeness{4}; // 0 (sharpest) increasing infinite
+
         VDrags KiAddTrainingWhite(VDrags const & pm) { return KiAddTraining(pm, m_mBrainWhite); }
 	VDrags KiAddTrainingBlack(VDrags const & pm) { return KiAddTraining(pm, m_mBrainBlack); }
 
@@ -337,7 +339,7 @@ class CCanvas
             for ( auto const & a:setbc )
         	{
         	vd.emplace_back(std::pair{SPawn{a.f.x, a.f.y}, SMove{a.t, 0, 0}});
-        	if (vd.size() > 4) break;
+        	if (vd.size() > m_nInsharpeness) break;
         	}
             return vd;
             }

@@ -68,7 +68,7 @@ void CCanvas::Event(sf::Event const & event)
                 case 'd': break;
                 case 'e': DumpBrainWhite(); break;
                 case 'f': m_bKiTest=true; break;
-                case 'g':
+                case 'g': ++m_nInsharpeness; break;
                 case 'h': m_bByHand = !m_bByHand; break;
                 case 'u': 
                 case 'i': if ( m_cKeyDown == 'i' ) m_cKeyDown='I';
@@ -114,7 +114,7 @@ void CCanvas::Event(sf::Event const & event)
                 case 'd': DumpGame(); break;
                 case 'e': DumpBrainBlack(); break;
                 case 'f': m_bKiTest=false; break;
-                case 'g':
+                case 'g': if (m_nInsharpeness > 0) --m_nInsharpeness; break;
                 case 'h': m_bByHand = !m_bByHand; break;
                 case 'u': 
                 case 'i': 
@@ -148,6 +148,8 @@ void CCanvas::StartLevel(int const & i)
 	}
     m_nChosenGame = i;
     m_bPhase = true;
+
+//  if ( m_bByHand ) DumpBrainBlack();
 
     m_tOffset = {25,50};
     switch (i)
@@ -388,7 +390,6 @@ void CCanvas::RecognizeBoard()
 bool CCanvas::PlayWhite(bool const & bPhase)
     {
     RecognizeBoard();
-    if ( m_iActivWhite < 0 ) m_iActivWhite=0;
 
     VDrags zugs{ DragWhite(m_vPawnsWhite) };
     if ( !zugs.size() )
@@ -396,35 +397,46 @@ bool CCanvas::PlayWhite(bool const & bPhase)
 	RecognizeBoard();
 	VDrags zb{ DragBlack(m_vPawnsBlack) };
 	VDrags zw{ DragWhite(m_vPawnsWhite) };
+        long nResult = m_vPawnsWhite.size() - m_vPawnsBlack.size();
+        KiAddExpirienceWhite(m_tGameWhite,  nResult);
+        KiAddExpirienceBlack(m_tGameBlack, -nResult);
 	if ( m_vPawnsWhite.size() > m_vPawnsBlack.size() )
 	    {
 	    m_nWinsWhite++;
-	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  +++ White wins\n";
-	    KiAddExpirienceBlack(m_tGameBlack, -1);
-	    KiAddExpirienceWhite(m_tGameWhite,  1);
+	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  +++ White wins\n";
 	    }
 	if ( m_vPawnsWhite.size() == m_vPawnsBlack.size() )
 	    {
-	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
-	    KiAddExpirienceBlack(m_tGameBlack, 0);
-	    KiAddExpirienceWhite(m_tGameWhite, 0);
+	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
 	    }
 	if ( m_vPawnsWhite.size() < m_vPawnsBlack.size() )
 	    {
 	    m_nWinsBlack++;
-	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  --- Black wins\n";
-	    KiAddExpirienceBlack(m_tGameBlack,  1);
-	    KiAddExpirienceWhite(m_tGameWhite, -1);
+	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  --- Black wins\n";
 	    }
 	StartLevel(m_nChosenGame);
 	RecognizeBoard();
-	m_iActivWhite=0;
+	m_iActivWhite=-1;
 	}
 
-
-    if ( (m_vPawnsWhite.size() <= (size_t)m_iActivWhite) ) m_iActivWhite = m_vPawnsWhite.size()-1;
-    auto & tPawn = m_vPawnsWhite[m_iActivWhite];
-
+//  if ( (m_vPawnsWhite.size() <= (size_t)m_iActivWhite) ) m_iActivWhite = m_vPawnsWhite.size()-1;
+    auto & tPawn = m_vPawnsWhite[0];
+    if ( m_iActivWhite < 0 )
+        {
+        tPawn = m_vPawnsWhite[m_iActivWhite = 0];
+        for (int i{0}; i < (int)m_vPawnsWhite.size(); ++i)
+            {
+            if (PossibleMovesWhite(tPawn).size() < PossibleMovesWhite(m_vPawnsWhite[i]).size())
+                {
+                tPawn = m_vPawnsWhite[m_iActivWhite = i];
+                }
+            }
+        }
+    else
+        {
+        if ( (m_vPawnsWhite.size() <= (size_t)m_iActivWhite) ) m_iActivWhite = m_vPawnsWhite.size()-1;
+        tPawn = m_vPawnsWhite[m_iActivWhite];
+        }
     EDirection eDir;
     switch ( m_tPengi.cCurrentMove )
 	{
@@ -450,6 +462,9 @@ bool CCanvas::PlayWhite(bool const & bPhase)
 
 	std::cout << "W: (" << i     << ") " << fp.x << ", " << fp.y << " => ";
 	std::cout << "W: (" << nMove << ") " << tPawn.p.x << ", " << tPawn.p.y << '\n';
+
+        m_iActivWhite = -1;
+
 	return !bPhase; // moved, next cycle is black's
 	}
     return bPhase; // not yet moved, next cycle is ours
@@ -501,25 +516,22 @@ void CCanvas::KiLearnWhite()
 	RecognizeBoard();
 	VDrags zb{ DragBlack(m_vPawnsBlack) };
 	VDrags zw{ DragWhite(m_vPawnsWhite) };
+        long nResult = m_vPawnsWhite.size() - m_vPawnsBlack.size();
+        KiAddExpirienceWhite(m_tGameWhite,  nResult);
+        KiAddExpirienceBlack(m_tGameBlack, -nResult);
 	if ( m_vPawnsWhite.size() > m_vPawnsBlack.size() )
 	    {
 	    m_nWinsWhite++;
-	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  +++ White wins\n";
-	    KiAddExpirienceBlack(m_tGameBlack, -1);
-	    KiAddExpirienceWhite(m_tGameWhite,  1);
+	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  +++ White wins\n";
 	    }
 	if ( m_vPawnsWhite.size() == m_vPawnsBlack.size() )
 	    {
-	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
-	    KiAddExpirienceBlack(m_tGameBlack, 0);
-	    KiAddExpirienceWhite(m_tGameWhite, 0);
+	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
 	    }
 	if ( m_vPawnsWhite.size() < m_vPawnsBlack.size() )
 	    {
 	    m_nWinsBlack++;
-	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  --- Black wins\n";
-	    KiAddExpirienceBlack(m_tGameBlack,  1);
-	    KiAddExpirienceWhite(m_tGameWhite, -1);
+	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  --- Black wins\n";
 	    }
 	StartLevel(m_nChosenGame);
 	}
@@ -573,25 +585,22 @@ void CCanvas::KiLearnBlack()
 	RecognizeBoard();
 	VDrags zb{ DragBlack(m_vPawnsBlack) };
 	VDrags zw{ DragWhite(m_vPawnsWhite) };
+        long nResult = m_vPawnsWhite.size() - m_vPawnsBlack.size();
+        KiAddExpirienceWhite(m_tGameWhite,  nResult);
+        KiAddExpirienceBlack(m_tGameBlack, -nResult);
 	if ( m_vPawnsWhite.size() > m_vPawnsBlack.size() )
 	    {
 	    m_nWinsWhite++;
-	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  +++ White wins\n";
-	    KiAddExpirienceBlack(m_tGameBlack, -1);
-	    KiAddExpirienceWhite(m_tGameWhite,  1);
+	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  +++ White wins\n";
 	    }
 	if ( m_vPawnsWhite.size() == m_vPawnsBlack.size() )
 	    {
-	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
-	    KiAddExpirienceBlack(m_tGameBlack, 0);
-	    KiAddExpirienceWhite(m_tGameWhite, 0);
+	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
 	    }
 	if ( m_vPawnsWhite.size() < m_vPawnsBlack.size() )
 	    {
 	    m_nWinsBlack++;
-	    std::cout << m_bKiTest << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  --- Black wins\n";
-	    KiAddExpirienceBlack(m_tGameBlack,  1);
-	    KiAddExpirienceWhite(m_tGameWhite, -1);
+	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  --- Black wins\n";
 	    }
 	StartLevel(m_nChosenGame);
 	}
@@ -630,13 +639,13 @@ void CCanvas::OnDraw()
         CGlPawn   p;
 
         glNewList(m_nFieldBlack, GL_COMPILE); g(13.0f,13.0f, 2.9f, addd, addd, addd, addd, addd, addd ); glEndList(); // FieldBlack
-        glNewList(m_nFigurWhite, GL_COMPILE); p( 6.0f, 6.0f, 9.5f, a777 ); glEndList(); // FigurWhite
+        glNewList(m_nFigurWhite, GL_COMPILE); p( 6.0f, 6.0f, 9.5f, a777                               ); glEndList(); // FigurWhite
         glNewList(m_nFieldWhite, GL_COMPILE); g(13.0f,13.0f, 2.9f, ahhh, ahhh, ahhh, ahhh, ahhh, ahhh ); glEndList(); // FieldWhite
-        glNewList(m_nFigurBlack, GL_COMPILE); p( 6.5f, 6.5f, 9.5f, a333 ); glEndList(); // FigurBlack
+        glNewList(m_nFigurBlack, GL_COMPILE); p( 6.5f, 6.5f, 9.5f, a333                               ); glEndList(); // FigurBlack
         glNewList(m_nFrameRed,   GL_COMPILE); g(11.0f,11.0f, 3.0f, a155, a155, a155, a155, a155, a155 ); glEndList(); // FrameRed,
         glNewList(m_nFrameGreen, GL_COMPILE); g( 8.5f, 8.5f, 3.1f, a010, a010, a010, a010, a010, a010 ); glEndList(); // FrameGreen
-        glNewList(m_nFigurRed,   GL_COMPILE); p( 6.0f, 6.0f, 9.5f, a155 ); glEndList(); // FigurRed
-        glNewList(m_nFigurGreen, GL_COMPILE); p( 6.0f, 6.0f, 9.5f, a010 ); glEndList(); // FigurGreen
+        glNewList(m_nFigurRed,   GL_COMPILE); p( 6.0f, 6.0f, 9.5f, a155                               ); glEndList(); // FigurRed
+        glNewList(m_nFigurGreen, GL_COMPILE); p( 6.0f, 6.0f, 9.5f, a010                               ); glEndList(); // FigurGreen
         }
 
     auto const s = m_oCtx.getSize();
