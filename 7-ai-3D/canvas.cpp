@@ -9,7 +9,6 @@
 #include <random>
 #include <GL/glu.h>
 #include <unistd.h> // usleep
-#include <random>
 #include <utility>
 
 
@@ -71,11 +70,12 @@ void CCanvas::Event(sf::Event const & event)
                 case 'g': ++m_nInsharpeness; break;
                 case 'h': m_bByHand = !m_bByHand; break;
                 case 'u': 
-                case 'i': if ( m_cKeyDown == 'i' ) m_cKeyDown='I';
+                case 'i':
                 case 'j':
                 case 'o': 
 		case 'k': 
-                case 'l': m_tPengi.cCurrentMove=m_cKeyDown; break;
+                case 'l': if ( m_cKeyDown == 'i' ) m_cKeyDown='I';
+                          m_tPengi.cCurrentMove=m_cKeyDown; break;
                 case 'n': StartLevel(1); break;
                 case 'm': break;
                 case 'w': Win(); break;
@@ -147,7 +147,7 @@ void CCanvas::StartLevel(int const & i)
 	m_mBrainBlack.clear();
 	}
     m_nChosenGame = i;
-    m_bPhase = true;
+    m_bPhase = !true;
 
 //  if ( m_bByHand ) DumpBrainBlack();
 
@@ -275,8 +275,8 @@ int CCanvas::MoveWhite(SPawn const & p) const
 VSMoves CCanvas::PossibleMovesWhite(SPawn const & p) const
     {
     VSMoves tMoves{};
-    int  y = m_tBoard.d.x;	// width of the board
-    int  l = m_tBoard.g.length();	// stellung
+    int  y = m_tBoard.d.x;	        // width of the board
+    int  l = m_tBoard.g.length();	// game / stellung
     int  i = p.p.x + p.p.y * y;		// input position
 
     int  id = i + y;
@@ -303,7 +303,7 @@ VSMoves CCanvas::PossibleMovesWhite(SPawn const & p) const
 VSMoves CCanvas::PossibleMovesBlack(SPawn const & p) const
     {
     VSMoves tMoves{};
-    int  y = m_tBoard.d.x;	// width of the board
+    int  y = m_tBoard.d.x;		// width of the board
     int  l = m_tBoard.g.length();	// stellung
     int  i = p.p.x + p.p.y * y;		// input position
 
@@ -398,8 +398,8 @@ bool CCanvas::PlayWhite(bool const & bPhase)
 	VDrags zb{ DragBlack(m_vPawnsBlack) };
 	VDrags zw{ DragWhite(m_vPawnsWhite) };
         long nResult = m_vPawnsWhite.size() - m_vPawnsBlack.size();
-        KiAddExpirienceWhite(m_tGameWhite,  nResult);
-        KiAddExpirienceBlack(m_tGameBlack, -nResult);
+        KiAddExpirienceWhite(m_tGameWhite, -1);//nResult);
+        KiAddExpirienceBlack(m_tGameBlack,  1);//nResult);
 	if ( m_vPawnsWhite.size() > m_vPawnsBlack.size() )
 	    {
 	    m_nWinsWhite++;
@@ -517,8 +517,8 @@ void CCanvas::KiLearnWhite()
 	VDrags zb{ DragBlack(m_vPawnsBlack) };
 	VDrags zw{ DragWhite(m_vPawnsWhite) };
         long nResult = m_vPawnsWhite.size() - m_vPawnsBlack.size();
-        KiAddExpirienceWhite(m_tGameWhite,  nResult);
-        KiAddExpirienceBlack(m_tGameBlack, -nResult);
+        KiAddExpirienceWhite(m_tGameWhite, -1);//nResult);
+        KiAddExpirienceBlack(m_tGameBlack,  1);//nResult);
 	if ( m_vPawnsWhite.size() > m_vPawnsBlack.size() )
 	    {
 	    m_nWinsWhite++;
@@ -586,8 +586,9 @@ void CCanvas::KiLearnBlack()
 	VDrags zb{ DragBlack(m_vPawnsBlack) };
 	VDrags zw{ DragWhite(m_vPawnsWhite) };
         long nResult = m_vPawnsWhite.size() - m_vPawnsBlack.size();
-        KiAddExpirienceWhite(m_tGameWhite,  nResult);
-        KiAddExpirienceBlack(m_tGameBlack, -nResult);
+        nResult = (nResult != 0) ? 0 : (nResult>0) ? 1 : -1;
+        KiAddExpirienceWhite(m_tGameWhite,  1);//nResult);
+        KiAddExpirienceBlack(m_tGameBlack, -1);//nResult);
 	if ( m_vPawnsWhite.size() > m_vPawnsBlack.size() )
 	    {
 	    m_nWinsWhite++;

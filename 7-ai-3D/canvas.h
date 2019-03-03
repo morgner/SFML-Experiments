@@ -302,7 +302,7 @@ class CCanvas
 	size_t m_nWinsWhite{0};
 	size_t m_nWinsBlack{0};
 
-        size_t m_nInsharpeness{4}; // 0 (sharpest) increasing infinite
+        size_t m_nInsharpeness{1}; // 0 (sharpest) increasing infinite
 
         VDrags KiAddTrainingWhite(VDrags const & pm) { return KiAddTraining(pm, m_mBrainWhite); }
 	VDrags KiAddTrainingBlack(VDrags const & pm) { return KiAddTraining(pm, m_mBrainBlack); }
