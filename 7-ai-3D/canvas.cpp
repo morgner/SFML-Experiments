@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <ctime>
+#include <stdlib.h>    // abs
 #include <sstream>
 #include <fstream>
 #include <math.h>
@@ -397,18 +398,18 @@ bool CCanvas::PlayWhite(bool const & bPhase)
 	RecognizeBoard();
 	VDrags zb{ DragBlack(m_vPawnsBlack) };
 	VDrags zw{ DragWhite(m_vPawnsWhite) };
-        long nResult = m_vPawnsWhite.size() - m_vPawnsBlack.size();
-        KiAddExpirienceWhite(m_tGameWhite, -1);//nResult);
-        KiAddExpirienceBlack(m_tGameBlack,  1);//nResult);
+        // long nResult = m_vPawnsWhite.size() - m_vPawnsBlack.size();
+        KiAddExpirienceWhite(m_tGameWhite, -m_vPawnsBlack.size());
+        KiAddExpirienceBlack(m_tGameBlack,  m_vPawnsBlack.size());
 	if ( m_vPawnsWhite.size() > m_vPawnsBlack.size() )
 	    {
 	    m_nWinsWhite++;
 	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  +++ White wins\n";
 	    }
-	if ( m_vPawnsWhite.size() == m_vPawnsBlack.size() )
-	    {
-	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
-	    }
+	// if ( m_vPawnsWhite.size() == m_vPawnsBlack.size() )
+	//     {
+	//     std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
+	//     }
 	if ( m_vPawnsWhite.size() < m_vPawnsBlack.size() )
 	    {
 	    m_nWinsBlack++;
@@ -516,18 +517,18 @@ void CCanvas::KiLearnWhite()
 	RecognizeBoard();
 	VDrags zb{ DragBlack(m_vPawnsBlack) };
 	VDrags zw{ DragWhite(m_vPawnsWhite) };
-        long nResult = m_vPawnsWhite.size() - m_vPawnsBlack.size();
-        KiAddExpirienceWhite(m_tGameWhite, -1);//nResult);
-        KiAddExpirienceBlack(m_tGameBlack,  1);//nResult);
+        // long nResult = m_vPawnsWhite.size() - m_vPawnsBlack.size();
+        KiAddExpirienceWhite(m_tGameWhite, -m_vPawnsBlack.size());
+        KiAddExpirienceBlack(m_tGameBlack,  m_vPawnsBlack.size());
 	if ( m_vPawnsWhite.size() > m_vPawnsBlack.size() )
 	    {
 	    m_nWinsWhite++;
 	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  +++ White wins\n";
 	    }
-	if ( m_vPawnsWhite.size() == m_vPawnsBlack.size() )
-	    {
-	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
-	    }
+	// if ( m_vPawnsWhite.size() == m_vPawnsBlack.size() )
+	//     {
+	//     std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
+	//     }
 	if ( m_vPawnsWhite.size() < m_vPawnsBlack.size() )
 	    {
 	    m_nWinsBlack++;
@@ -585,19 +586,18 @@ void CCanvas::KiLearnBlack()
 	RecognizeBoard();
 	VDrags zb{ DragBlack(m_vPawnsBlack) };
 	VDrags zw{ DragWhite(m_vPawnsWhite) };
-        long nResult = m_vPawnsWhite.size() - m_vPawnsBlack.size();
-        nResult = (nResult != 0) ? 0 : (nResult>0) ? 1 : -1;
-        KiAddExpirienceWhite(m_tGameWhite,  1);//nResult);
-        KiAddExpirienceBlack(m_tGameBlack, -1);//nResult);
+        // long nResult = m_vPawnsWhite.size() - m_vPawnsBlack.size();
+        KiAddExpirienceWhite(m_tGameWhite,  m_vPawnsWhite.size());
+        KiAddExpirienceBlack(m_tGameBlack, -m_vPawnsWhite.size());
 	if ( m_vPawnsWhite.size() > m_vPawnsBlack.size() )
 	    {
 	    m_nWinsWhite++;
 	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  +++ White wins\n";
 	    }
-	if ( m_vPawnsWhite.size() == m_vPawnsBlack.size() )
-	    {
-	    std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
-	    }
+	// if ( m_vPawnsWhite.size() == m_vPawnsBlack.size() )
+	//     {
+	//     std::cout << m_bKiTest << " " << m_nInsharpeness << " " << m_nWinsWhite << ":" << m_nWinsBlack << "  ::: no win\n";
+	//     }
 	if ( m_vPawnsWhite.size() < m_vPawnsBlack.size() )
 	    {
 	    m_nWinsBlack++;
